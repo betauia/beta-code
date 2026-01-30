@@ -28,3 +28,20 @@ Tasks ("problems") are configured in three places: metadata, problem content, an
    - The judge loads tests from `frontend/problems/<id>/tests.json` based on the `problemId` sent from the UI.
 
 Once these three pieces are in place, your new task will appear on the Play page and can be opened and submitted.
+
+
+
+## Start Docker
+
+1. **Path**
+   
+   - Set path to beta-code in terminal
+     
+3. **Start Docker**
+   
+   - Run `docker build -t cpp-sandbox:latest .\sandbo` in terminal
+     
+5. **Start webserver**
+   
+   - Run: `npm run dev` in terminal
+
