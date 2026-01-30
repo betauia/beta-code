@@ -90,25 +90,32 @@ if (!data) {
   <script define:vars={{ problemId: id }}>
   const btn = document.getElementById("submitBtn");
   const result = document.getElementById("result");
+  const codeEl = document.getElementById("code");
 
-  btn.addEventListener("click", async () => {
-    result.textContent = "Submitting...";
+  if (btn && result && codeEl) {
+    btn.addEventListener("click", async () => {
+      result.textContent = "Submitting...";
 
-    const code = document.getElementById("code").value;
+      const code = codeEl.value;
 
-    const res = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemId, code })
+      try {
+        const res = await fetch("/api/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ problemId, code })
+        });
+
+        const text = await res.text();
+        try {
+          result.textContent = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          result.textContent = text;
+        }
+      } catch (err) {
+        result.textContent = "Error: " + err.message;
+      }
     });
-
-    const text = await res.text();
-    try {
-      result.textContent = JSON.stringify(JSON.parse(text), null, 2);
-    } catch {
-      result.textContent = text;
-    }
-  });
+  }
 </script>
 
 </ProblemLayout>
