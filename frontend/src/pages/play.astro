@@ -1,57 +1,37 @@
 ---
 import "../styles/global.css";
+import { problems } from "../data/problems";
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Play - BETA-CODE</title>
-  </head>
+<head>
+  <title>Play - BETA-CODE</title>
+</head>
 
-  <body>
-    <header>
-      <h1>Beta-code</h1>
-      <nav style="display:flex; gap:12px; justify-content:center; padding-bottom:10px;">
-        <a href="/">Home</a>
-        <a href="/play">Play</a>
-      </nav>
-    </header>
+<header>
+  <h1>Beta-code</h1>
+  <nav style="display:flex; gap:12px; justify-content:center; padding-bottom:10px;">
+    <a href="/">Home</a>
+    <a href="/play">Play</a>
+  </nav>
+</header>
 
-    <main style="max-width: 900px; margin: 0 auto; padding: 16px;">
-      <h1>Submit C++</h1>
-      <p class="p-text">Write your solution and submit it to be judged.</p>
-
-      <textarea id="code" rows="16" style="width:100%; font-family: monospace; font-size: 14px;"></textarea>
-
-      <div style="margin-top: 12px;">
-        <button id="submitBtn">Submit</button>
-      </div>
-
-      <pre id="result" style="text-align:left; margin-top:12px; white-space:pre-wrap;"></pre>
-    </main>
-
-    <script>
-        const btn = document.getElementById("submitBtn");
-        const result = document.getElementById("result");
-
-        if (btn && result) {
-            btn.addEventListener("click", async () => {
-            result.textContent = "Submitting...";
-
-            const codeEl = document.getElementById("code");
-            const code = codeEl && "value" in codeEl ? codeEl.value : "";
-
-            const res = await fetch("/api/submit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ problemId: 1, code })
-            });
-
-            const data = await res.json();
-            result.textContent = JSON.stringify(data, null, 2);
-            });
-        }
-        </script>
-  </body>
-</html>
+<main style="max-width: 900px; margin: 0 auto; padding: 16px;">
+  {(
+    <>
+      <h1>All Tasks</h1>
+      <p class="p-text">Choose a task to start coding.</p>
+      <ul style="list-style:none; padding:0; display:grid; gap:12px;">
+        {problems.map((t) => (
+          <li style="border:1px solid #333; border-radius:12px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong>{t.title}</strong>
+                <div class="p-text">Difficulty: {t.difficulty}  |  Points: {t.points}</div>
+              </div>
+              <a href={`/problems/${t.id}`}>Open</a>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
