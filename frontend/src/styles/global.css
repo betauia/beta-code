@@ -27,3 +27,21 @@ body{
 .p-text{
     color: var(--small-text);
 }
+
+.container {
+    display: flex;
+    gap: 5px; 
+}
+
+.TaskBox{
+    margin: 16%;
+    width: 70%;
+    background-color: var(--small-text);
+    color: #151E2D;
+}
+
+.CodeBox{
+    margin: 10%;
+    width: 90%;
+    background-color: var(--small-text);
+}
