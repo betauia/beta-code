@@ -39,7 +39,7 @@ Once these three pieces are in place, your new task will appear on the Play page
      
 3. **Start Docker**
    
-   - Run `docker build -t cpp-sandbox:latest .\sandbo` in terminal
+   - Run `docker build -t cpp-sandbox:latest .\sandbox` in terminal
      
 5. **Start webserver**
    
