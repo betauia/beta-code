@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "title": "Hello World",
+    "difficulty": "Easy",
+    "tags": ["io", "basics"]
+  },
+  {
+    "id": 2,
+    "title": "Sum of Two Numbers",
+    "difficulty": "Easy",
+    "tags": ["math", "io"]
+  },
+  {
+    "id": 3,
+    "title": "Two Sum",
+    "difficulty": "Medium",
+    "tags": ["arrays", "hashmap"]
+  }
+]
