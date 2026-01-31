@@ -1,0 +1,121 @@
+---
+import ProblemLayout from "../../layout/ProblemLayout.astro";
+import { problems } from "../../data/problems";
+
+// URL param: /problem/1 → id = "1"
+const { id } = Astro.params;
+
+// Find problem metadata
+const problem = problems.find((p) => p.id === id);
+if (!problem || !id) {
+  return new Response("Problem not found", { status: 404 });
+}
+
+// Temporary: problem statements + starter code
+// (Later this will come from files or DB)
+const problemData: Record<
+  string,
+  { statement: string; starter: string }
+> = {
+  "1": {
+    statement: "Read two integers and print their sum.",
+    starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+  long long a, b;
+  cin >> a >> b;
+  cout << a + b << "\\n";
+  return 0;
+}
+`,
+  },
+  "2": {
+    statement: "Given N, print FizzBuzz from 1 to N.",
+    starter: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+  int N;
+  cin >> N;
+  for (int i = 1; i <= N; i++) {
+    if (i % 15 == 0) cout << "FizzBuzz";
+    else if (i % 3 == 0) cout << "Fizz";
+    else if (i % 5 == 0) cout << "Buzz";
+    else cout << i;
+    cout << "\\n";
+  }
+}
+`,
+  },
+};
+
+const data = problemData[id];
+if (!data) {
+  return new Response("Problem data missing", { status: 500 });
+}
+---
+
+<ProblemLayout activeId={id}>
+  <h1>{problem.title}</h1>
+  <p><strong>Points:</strong> {problem.points}</p>
+
+  <section style="margin-top: 16px;">
+    <h2>Problem</h2>
+    <p>{data.statement}</p>
+  </section>
+
+  <section style="margin-top: 20px;">
+    <h2>Code (C++)</h2>
+    <textarea
+      id="code"
+      rows="18"
+      style="width:100%; font-family: monospace; font-size: 14px;"
+    >
+{data.starter}</textarea>
+
+    <div style="margin-top: 12px;">
+      <button id="submitBtn">Submit</button>
+    </div>
+  </section>
+
+  <section style="margin-top: 20px;">
+    <h2>Result</h2>
+    <pre
+      id="result"
+      style="white-space:pre-wrap; background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;"
+    ></pre>
+  </section>
+
+  <script define:vars={{ problemId: id }}>
+  const btn = document.getElementById("submitBtn");
+  const result = document.getElementById("result");
+  const codeEl = document.getElementById("code");
+
+  if (btn && result && codeEl) {
+    btn.addEventListener("click", async () => {
+      result.textContent = "Submitting...";
+
+      const code = codeEl.value;
+
+      try {
+        const res = await fetch("/api/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ problemId, code })
+        });
+
+        const text = await res.text();
+        try {
+          result.textContent = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          result.textContent = text;
+        }
+      } catch (err) {
+        result.textContent = "Error: " + err.message;
+      }
+    });
+  }
+</script>
+
+</ProblemLayout>

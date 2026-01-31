@@ -1,0 +1,37 @@
+---
+import "../styles/global.css";
+import { problems } from "../data/problems";
+---
+
+<head>
+  <title>Play - BETA-CODE</title>
+</head>
+
+<header>
+  <h1>Beta-code</h1>
+  <nav style="display:flex; gap:12px; justify-content:center; padding-bottom:10px;">
+    <a href="/">Home</a>
+    <a href="/play">Play</a>
+  </nav>
+</header>
+
+<main style="max-width: 900px; margin: 0 auto; padding: 16px;">
+  {(
+    <>
+      <h1>All Tasks</h1>
+      <p class="p-text">Choose a task to start coding.</p>
+      <ul style="list-style:none; padding:0; display:grid; gap:12px;">
+        {problems.map((t) => (
+          <li style="border:1px solid #333; border-radius:12px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong>{t.title}</strong>
+                <div class="p-text">Difficulty: {t.difficulty}  |  Points: {t.points}</div>
+              </div>
+              <a href={`/problems/${t.id}`}>Open</a>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
