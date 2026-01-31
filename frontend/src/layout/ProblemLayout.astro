@@ -1,0 +1,37 @@
+---
+import "../styles/global.css";
+import Sidebar from "../components/Sidebar.astro";
+import { problems } from "../data/problems";
+
+const { activeId } = Astro.props as { activeId?: string };
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Problems</title>
+  </head>
+
+  <body>
+    <div class="shell">
+      <Sidebar problems={problems} activeId={activeId} />
+      <main class="content">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
+
+<style>
+  .shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .content {
+    flex: 1;
+    padding: 20px;
+    max-width: 1100px;
+  }
+</style>
