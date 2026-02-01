@@ -38,7 +38,7 @@ Keep this terminal window open.
 Open a third terminal, navigate to the root folder, and run:
 
 ```bash
-REDIS_URL="redis://127.0.0.1:6379" PROBLEMS_DIR="$ROOT\\runner_problems" JOBS_BASE="$ROOT\\runner_jobs" CONCURRENCY="5" node runner/worker.js
+REDIS_URL="redis://127.0.0.1:6379" PROBLEMS_DIR="$ROOT/runner_problems" JOBS_BASE="$ROOT/runner_jobs" CONCURRENCY="5" node runner/worker.js
 ```
 
 You should see output similar to:
