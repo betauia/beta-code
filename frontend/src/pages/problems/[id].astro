@@ -25,6 +25,15 @@ if (!id) throw new Error("Missing problem id in route params");
           class="code-editor"
           spellcheck="false"
           placeholder="// Write your C++ code here..."
+          set:text="#include <iostream>
+using namespace std;
+
+int main() {
+    int a, b;
+    cin >> a >> b;
+    cout << a + b;
+}
+"
         ></textarea>
       </div>
     </div>

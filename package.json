@@ -1,5 +1,9 @@
 {
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0"
+  },
+  "scripts": {
+     "start": "concurrently \"docker run --rm -p 6379:6379 redis:7\" \"cd frontend && npm run dev\" \"cross-env REDIS_URL=redis://127.0.0.1:6379 node runner/worker.js\""
   }
 }

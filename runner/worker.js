@@ -1,17 +1,25 @@
-require('dotenv').config();
-
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const REDIS_URL = process.env.REDIS_URL;
-const PROBLEMS_DIR = process.env.PROBLEMS_DIR || "/srv/judge/problems";
-const JOBS_BASE = process.env.JOBS_BASE || "/srv/judge/jobs";
+
+const PROBLEMS_DIR =
+  process.env.PROBLEMS_DIR ||
+  join(__dirname, "..", "runner_problems");
+
+const JOBS_BASE =
+  process.env.JOBS_BASE ||
+  join(__dirname, "..", "runner_jobs");
+
 const CONCURRENCY = Number(process.env.CONCURRENCY || "50");
 
 await mkdir(JOBS_BASE, { recursive: true });
