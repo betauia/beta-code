@@ -24,8 +24,8 @@ try {
       <h1>Beta-code</h1>
       <nav class="site-nav">
         <a href="/">Home</a>
-        <a href="/taskPage">Tasks</a>
-        <a href="/play">Playground</a>
+        <a href="/play">Tasks</a>
+        <a href="/teams">Teams</a>
       </nav>
     </header>
 
@@ -61,11 +61,6 @@ try {
               <li class="team-item">
                 <div>
                   <strong>{team.name}</strong>
-                  {team.description ? (
-                    <p>{team.description}</p>
-                  ) : (
-                    <p class="p-text">No description yet.</p>
-                  )}
                 </div>
                 <span class="team-meta">
                   Created {new Date(team.createdAt).toLocaleDateString()}
@@ -92,7 +87,6 @@ try {
           const formData = new FormData(form);
           const payload = {
             name: String(formData.get("name") || ""),
-            description: String(formData.get("description") || ""),
           };
 
           try {
@@ -114,9 +108,7 @@ try {
             item.innerHTML = `
               <div>
                 <strong>${team.name}</strong>
-                <p>${team.description || "No description yet."}</p>
               </div>
-              <span class="team-meta">Created just now</span>
             `;
             list.prepend(item);
             form.reset();
