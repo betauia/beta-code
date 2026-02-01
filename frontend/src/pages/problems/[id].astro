@@ -1,121 +1,145 @@
 ---
 import ProblemLayout from "../../layout/ProblemLayout.astro";
-import { problems } from "../../data/problems";
 
-// URL param: /problem/1 → id = "1"
 const { id } = Astro.params;
-
-// Find problem metadata
-const problem = problems.find((p) => p.id === id);
-if (!problem || !id) {
-  return new Response("Problem not found", { status: 404 });
-}
-
-// Temporary: problem statements + starter code
-// (Later this will come from files or DB)
-const problemData: Record<
-  string,
-  { statement: string; starter: string }
-> = {
-  "1": {
-    statement: "Read two integers and print their sum.",
-    starter: `#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-  long long a, b;
-  cin >> a >> b;
-  cout << a + b << "\\n";
-  return 0;
-}
-`,
-  },
-  "2": {
-    statement: "Given N, print FizzBuzz from 1 to N.",
-    starter: `#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-  int N;
-  cin >> N;
-  for (int i = 1; i <= N; i++) {
-    if (i % 15 == 0) cout << "FizzBuzz";
-    else if (i % 3 == 0) cout << "Fizz";
-    else if (i % 5 == 0) cout << "Buzz";
-    else cout << i;
-    cout << "\\n";
-  }
-}
-`,
-  },
-};
-
-const data = problemData[id];
-if (!data) {
-  return new Response("Problem data missing", { status: 500 });
-}
+if (!id) throw new Error("Missing problem id in route params");
 ---
 
-<ProblemLayout activeId={id}>
-  <h1>{problem.title}</h1>
-  <p><strong>Points:</strong> {problem.points}</p>
+<ProblemLayout>
+  <section class="problem-page" data-problem-id={id}>
+    <h1>Problem {id}</h1>
 
-  <section style="margin-top: 16px;">
-    <h2>Problem</h2>
-    <p>{data.statement}</p>
-  </section>
-
-  <section style="margin-top: 20px;">
-    <h2>Code (C++)</h2>
-    <textarea
-      id="code"
-      rows="18"
-      style="width:100%; font-family: monospace; font-size: 14px;"
-    >
-{data.starter}</textarea>
-
-    <div style="margin-top: 12px;">
-      <button id="submitBtn">Submit</button>
+    <div class="problem-description">
+      <p>Read an integer and print its double.</p>
     </div>
+
+    <textarea id="code" class="code-editor" spellcheck="false">
+    </textarea>
+
+    <div class="actions">
+      <button id="runBtn" type="button">Run</button>
+    </div>
+
+    <div id="judgeResult" class="judge-result">Ready.</div>
   </section>
+</ProblemLayout>
 
-  <section style="margin-top: 20px;">
-    <h2>Result</h2>
-    <pre
-      id="result"
-      style="white-space:pre-wrap; background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;"
-    ></pre>
-  </section>
+<!-- Client-side logic -->
+<script type="module">
+  const root = document.querySelector(".problem-page");
+  if (!root) throw new Error("problem-page root not found");
 
-  <script define:vars={{ problemId: id }}>
-  const btn = document.getElementById("submitBtn");
-  const result = document.getElementById("result");
-  const codeEl = document.getElementById("code");
+  const runBtn = root.querySelector("#runBtn");
+  const resultBox = root.querySelector("#judgeResult");
+  const codeEl = root.querySelector("#code");
 
-  if (btn && result && codeEl) {
-    btn.addEventListener("click", async () => {
-      result.textContent = "Submitting...";
+  const problemId = root.dataset.problemId;
 
-      const code = codeEl.value;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-      try {
-        const res = await fetch("/api/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ problemId, code })
-        });
+  async function pollStatus(jobId) {
+    while (true) {
+      const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
+      const data = await res.json();
 
-        const text = await res.text();
-        try {
-          result.textContent = JSON.stringify(JSON.parse(text), null, 2);
-        } catch {
-          result.textContent = text;
-        }
-      } catch (err) {
-        result.textContent = "Error: " + err.message;
+      if (data.state === "waiting" || data.state === "active") {
+        resultBox.textContent = "⏳ Running...";
+        await sleep(500);
+        continue;
       }
-    });
+
+      if (data.state === "failed") {
+        resultBox.textContent = "❌ Error: " + (data.error ?? "Unknown");
+        runBtn.disabled = false;
+        return;
+      }
+
+      if (data.state === "completed") {
+        const verdict = data.result?.verdict ?? "Unknown";
+        const map = {
+          Accepted: "✅ Accepted",
+          "Wrong Answer": "❌ Wrong Answer",
+          "Compile Error": "🛠 Compile Error",
+          "Time Limit Exceeded": "⏱ Time Limit Exceeded",
+        };
+        resultBox.textContent = map[verdict] ?? verdict;
+        runBtn.disabled = false;
+        return;
+      }
+
+      resultBox.textContent = "⚠ Unknown state";
+      runBtn.disabled = false;
+      return;
+    }
   }
+
+  runBtn.addEventListener("click", async () => {
+    runBtn.disabled = true;
+    resultBox.textContent = "📤 Submitting...";
+
+    const res = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problemId,
+        code: codeEl.value,
+      }),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      resultBox.textContent = "❌ Submit failed (bad JSON response)";
+      runBtn.disabled = false;
+      return;
+    }
+
+    if (!res.ok) {
+      resultBox.textContent = "❌ Submit failed: " + (data?.error ?? res.statusText);
+      runBtn.disabled = false;
+      return;
+    }
+
+    await pollStatus(data.jobId);
+  });
 </script>
 
-</ProblemLayout>
+<style>
+  .problem-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .code-editor {
+    width: 100%;
+    min-height: 300px;
+    background: #0f0f0f;
+    color: #eaeaea;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #333;
+  }
+
+  .actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  button {
+    padding: 0.5rem 1.25rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .judge-result {
+    padding: 0.75rem 1rem;
+    background: #111;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: bold;
+  }
+</style>
