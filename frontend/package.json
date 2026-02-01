@@ -19,9 +19,12 @@
     "astro": "^5.16.11",
     "bullmq": "^5.67.2",
     "codemirror": "^6.0.2",
-    "ioredis": "^5.9.2"
+    "drizzle-orm": "^0.45.1",
+    "ioredis": "^5.9.2",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.16.0"
   }
 }
