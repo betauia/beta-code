@@ -18,4 +18,4 @@ npm start
 
 ## Stopping the Services
 
-To stop the services, press `Ctrl+C` in each terminal window.
+To stop the services, press `Ctrl+C` in terminal window.
