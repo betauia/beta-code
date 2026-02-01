@@ -1,0 +1,131 @@
+---
+import "../styles/global.css";
+import { listTeams } from "../lib/teams";
+
+let teams: any[] = [];
+let teamsError = "";
+
+try {
+  teams = await listTeams();
+} catch (error) {
+  teamsError = error instanceof Error ? error.message : "Database unavailable.";
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Teams | BETA-CODE</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Beta-code</h1>
+      <nav class="site-nav">
+        <a href="/">Home</a>
+        <a href="/taskPage">Tasks</a>
+        <a href="/play">Playground</a>
+      </nav>
+    </header>
+
+    <main class="teams-page">
+      <section class="teams-intro">
+        <h2>Teams</h2>
+        <p class="p-text">
+          Create a team to collaborate, share solutions, and track progress together.
+        </p>
+      </section>
+
+      <section class="teams-card">
+        <form id="team-form" class="teams-form">
+          <label class="teams-label" for="team-name">Team name</label>
+          <input id="team-name" name="name" type="text" maxlength="80" required />
+
+          <button type="submit">Create team</button>
+          <p id="team-message" class="teams-message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="teams-list">
+        <h3>Active teams</h3>
+        {teamsError ? (
+          <p class="teams-alert">
+            Unable to load teams yet. Configure <code>DATABASE_URL</code> to enable
+            PostgreSQL.
+          </p>
+        ) : null}
+        <ul id="team-list">
+          {teams.length ? (
+            teams.map((team) => (
+              <li class="team-item">
+                <div>
+                  <strong>{team.name}</strong>
+                  {team.description ? (
+                    <p>{team.description}</p>
+                  ) : (
+                    <p class="p-text">No description yet.</p>
+                  )}
+                </div>
+                <span class="team-meta">
+                  Created {new Date(team.createdAt).toLocaleDateString()}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li class="team-item team-empty">No teams yet. Create the first one!</li>
+          )}
+        </ul>
+      </section>
+    </main>
+
+    <script type="module">
+      const form = document.querySelector("#team-form");
+      const list = document.querySelector("#team-list");
+      const message = document.querySelector("#team-message");
+
+      if (form && list && message) {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          message.textContent = "";
+
+          const formData = new FormData(form);
+          const payload = {
+            name: String(formData.get("name") || ""),
+            description: String(formData.get("description") || ""),
+          };
+
+          try {
+            const res = await fetch("/api/teams", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              message.textContent = data?.error || "Unable to create team.";
+              return;
+            }
+
+            const team = data.team;
+            const item = document.createElement("li");
+            item.className = "team-item";
+            item.innerHTML = `
+              <div>
+                <strong>${team.name}</strong>
+                <p>${team.description || "No description yet."}</p>
+              </div>
+              <span class="team-meta">Created just now</span>
+            `;
+            list.prepend(item);
+            form.reset();
+            message.textContent = "Team created!";
+          } catch (error) {
+            message.textContent = "Unable to create team.";
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
