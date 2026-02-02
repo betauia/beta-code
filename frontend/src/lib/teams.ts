@@ -63,7 +63,7 @@ export async function createTeam({
   const pool = await getPool() as Pool;
   const result = await pool.query(
     "INSERT INTO teams (name) VALUES ($1) RETURNING id, name, created_at",
-    [name, description ?? null]
+    [name]
   );
 
   return mapTeam(result.rows[0]);
