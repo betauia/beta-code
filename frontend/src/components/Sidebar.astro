@@ -9,6 +9,11 @@ const { problems, activeId } = Astro.props as {
 
 <aside class="sidebar">
   <div class="sidebar-title">Tasks</div>
+  <nav class="site-nav">
+			<a href="../../">Home</a>
+			<a href="/play">Tasks</a>
+			<a href="/teams">Teams</a>
+		</nav>
 
   <nav class="sidebar-nav">
     {problems.map((p) => (
