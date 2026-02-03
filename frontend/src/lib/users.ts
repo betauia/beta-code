@@ -122,3 +122,18 @@ export async function getCompletedTasks(userId: number): Promise<string[]> {
  
   return result.rows[0].completed_tasks || [];
 }
+// Get all users for leaderboard
+export async function getAllUsers(): Promise<User[]> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT id, username, completed_tasks, created_at
+     FROM users`
+  );
+
+  return result.rows.map((row: User) => ({
+    id: row.id,
+    username: row.username,
+    completed_tasks: row.completed_tasks || [],
+    created_at: row.created_at,
+  }));
+}
