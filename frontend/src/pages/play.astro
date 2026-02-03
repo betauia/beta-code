@@ -14,11 +14,17 @@ const completedTasks = user?.completed_tasks || [];
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width" />
   <title>Play - BETA-CODE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
 </head>
-<body>
-  <header class="site-header">
-    <h1>Beta-code</h1>
-    <nav class="site-nav">
+
+<header class="site-header">
+			<div class="header-left">
+				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
+				<h1>eta-code</h1>
+			</div>
+			<nav class="site-nav">
       <a href="/">Home</a>
       <a href="/play">Tasks</a>
       <a href="/leaderboard">Leaderboard</a>
@@ -31,8 +37,9 @@ const completedTasks = user?.completed_tasks || [];
         <a href="/auth">Login</a>
       )}
     </nav>
+			
   </header>
- 
+
   <main style="max-width: 900px; margin: 0 auto; padding: 16px;">
     <h1>All Tasks</h1>
     <p class="p-text">Choose a task to start coding.</p>
