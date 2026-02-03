@@ -1,0 +1,220 @@
+---
+import "../styles/global.css";
+---
+ 
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Sign Up | BETA-CODE</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Beta-code</h1>
+      <nav class="site-nav">
+        <a href="/">Home</a>
+        <a href="/play">Tasks</a>
+        <a href="/teams">Teams</a>
+      </nav>
+    </header>
+ 
+    <main class="signup-page">
+      <section class="signup-intro">
+        <h2>Create Account</h2>
+        <p class="p-text">
+          Sign up to track your progress, join teams, and compete with others.
+        </p>
+      </section>
+ 
+      <section class="signup-card">
+        <form id="signup-form" class="signup-form">
+          <label class="signup-label" for="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            minlength="3"
+            maxlength="30"
+            pattern="[a-zA-Z0-9_]+"
+            placeholder="Enter username"
+            required
+          />
+ 
+          <label class="signup-label" for="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            minlength="6"
+            placeholder="Enter password"
+            required
+          />
+ 
+          <label class="signup-label" for="confirm-password"
+            >Confirm Password</label
+          >
+          <input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            minlength="6"
+            placeholder="Confirm password"
+            required
+          />
+ 
+          <button type="submit">Create Account</button>
+          <p id="signup-message" class="signup-message" role="status"></p>
+        </form>
+ 
+        <p class="signup-footer">
+          Already have an account? <a href="/login">Log in</a>
+        </p>
+      </section>
+    </main>
+ 
+    <script type="module">
+      const form = document.querySelector("#signup-form");
+      const message = document.querySelector("#signup-message");
+ 
+      if (form && message) {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          message.textContent = "";
+          message.className = "signup-message";
+ 
+          const formData = new FormData(form);
+          const username = String(formData.get("username") || "").trim();
+          const password = String(formData.get("password") || "");
+          const confirmPassword = String(
+            formData.get("confirm-password") || ""
+          );
+ 
+          if (password !== confirmPassword) {
+            message.textContent = "Passwords do not match";
+            message.className = "signup-message signup-error";
+            return;
+          }
+ 
+          try {
+            const res = await fetch("/api/signup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password }),
+            });
+ 
+            const data = await res.json().catch(() => ({}));
+ 
+            if (!res.ok) {
+              message.textContent = data?.error || "Unable to create account";
+              message.className = "signup-message signup-error";
+              return;
+            }
+ 
+            message.textContent = "Account created successfully!";
+            message.className = "signup-message signup-success";
+            form.reset();
+          } catch (error) {
+            message.textContent = "Unable to create account";
+            message.className = "signup-message signup-error";
+          }
+        });
+      }
+    </script>
+ 
+    <style>
+      .signup-page {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+        text-align: left;
+      }
+ 
+      .signup-intro {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+ 
+      .signup-intro h2 {
+        margin-bottom: 8px;
+      }
+ 
+      .signup-card {
+        background: #111b2b;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+      }
+ 
+      .signup-form {
+        display: grid;
+        gap: 12px;
+      }
+ 
+      .signup-form input {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #2d3f5f;
+        background: #0c1420;
+        color: var(--text-color);
+        padding: 10px 12px;
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+ 
+      .signup-form input:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+ 
+      .signup-form button {
+        margin-top: 8px;
+        background: var(--beta-blue);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+ 
+      .signup-form button:hover {
+        opacity: 0.9;
+      }
+ 
+      .signup-label {
+        font-weight: 600;
+        margin-top: 4px;
+      }
+ 
+      .signup-message {
+        margin: 8px 0 0;
+        text-align: center;
+      }
+ 
+      .signup-error {
+        color: #ff6b6b;
+      }
+ 
+      .signup-success {
+        color: #51cf66;
+      }
+ 
+      .signup-footer {
+        text-align: center;
+        margin-top: 16px;
+        color: var(--small-text);
+      }
+ 
+      .signup-footer a {
+        color: var(--beta-blue);
+        text-decoration: none;
+      }
+ 
+      .signup-footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </body>
+</html>
