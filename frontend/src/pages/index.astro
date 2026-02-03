@@ -21,6 +21,7 @@ const user = await getCurrentUser(Astro.request);
 			<nav class="site-nav">
 				<a href="/">Home</a>
 				<a href="/play">Tasks</a>
+				<a href="/leaderboard">Leaderboard</a>
 				{user ? (
 					<span class="user-info">
 						<span class="username">{user.username}</span>
