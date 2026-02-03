@@ -139,6 +139,16 @@ int main() {
           "Time Limit Exceeded": "⏱ Time Limit Exceeded",
         };
         resultBox.textContent = map[verdict] ?? verdict;
+         
+        // Mark task as completed if accepted
+        if (verdict === "Accepted") {
+          fetch("/api/complete-task", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ problemId }),
+          }).catch(() => {}); // Silently fail if not logged in
+        }
+ 
         runBtn.disabled = false;
         return;
       }

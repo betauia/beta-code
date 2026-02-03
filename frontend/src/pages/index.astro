@@ -1,14 +1,19 @@
 ---
+export const prerender = false;
+ 
 import "../styles/global.css";
+import { getCurrentUser } from "../lib/session";
+ 
+const user = await getCurrentUser(Astro.request);
 ---
-
+ 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="viewport" content="width=device-width" />
 		<title>BETA-CODE</title>
-		
+ 
 	</head>
 	<body>
 		<header class="site-header">
@@ -16,6 +21,14 @@ import "../styles/global.css";
 			<nav class="site-nav">
 				<a href="/">Home</a>
 				<a href="/play">Tasks</a>
+				{user ? (
+					<span class="user-info">
+						<span class="username">{user.username}</span>
+						<button id="logoutBtn" class="logout-btn">Logout</button>
+					</span>
+				) : (
+					<a href="/auth">Login</a>
+				)}
 			</nav>
 		</header>
 		<h1>WELLCOME !</h1>
@@ -25,7 +38,44 @@ import "../styles/global.css";
 
 		
 		<a href="/play">Go to Playground</a>
-		<a href="/teams">Go to Teams</a>
 	</body>
-
+	
+		<script>
+			const logoutBtn = document.getElementById('logoutBtn');
+			if (logoutBtn) {
+				logoutBtn.addEventListener('click', async () => {
+					await fetch('/api/logout', { method: 'POST' });
+					window.location.reload();
+				});
+			}
+		</script>
+ 
+		<style>
+			.user-info {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+ 
+			.username {
+				color: var(--beta-blue);
+				font-weight: 600;
+			}
+ 
+			.logout-btn {
+				padding: 6px 12px;
+				background: transparent;
+				border: 1px solid var(--small-text);
+				border-radius: 6px;
+				color: var(--small-text);
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.2s;
+			}
+ 
+			.logout-btn:hover {
+				border-color: var(--beta-blue);
+				color: var(--beta-blue);
+			}
+		</style>
 </html>
