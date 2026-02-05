@@ -4,6 +4,6 @@
     "cross-env": "^10.1.0"
   },
   "scripts": {
-      "start": "concurrently \"docker run --rm -p 6379:6379 redis:7\" \"docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=beta_code -p 5432:5432 postgres:16\" \"npm --prefix frontend run dev\" \"cross-env REDIS_URL=redis://localhost:6379 node runner/worker.js\""
+    "start": "concurrently \"docker run --rm -p 6379:6379 redis:7\" \"docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=beta_code -p 5432:5432 postgres:16\" \"npm --prefix frontend run dev\" \"cross-env REDIS_URL=redis://localhost:6379 node runner/worker.js\""
   }
 }
