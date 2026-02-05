@@ -1,140 +1,139 @@
 import { getPool } from "./db";
+import crypto from "crypto";
  
-export type User = {
+export interface User {
   id: number;
   username: string;
-  createdAt: string;
-};
+  completed_tasks: string[]; // Array of problem IDs
+  created_at: Date;
+}
  
-const USERS_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS users (
-    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    username text NOT NULL UNIQUE,
-    password_hash text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
+// Initialize the users table
+export async function initUsersTable() {
+  const pool = await getPool() as any;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      password_hash VARCHAR(128) NOT NULL,
+      salt VARCHAR(32) NOT NULL,
+      completed_tasks TEXT[] DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+ 
+// Hash password with salt
+function hashPassword(password: string, salt: string): string {
+  return crypto.createHash("sha256").update(password + salt).digest("hex");
+}
+ 
+// Create a new user
+export async function createUser(username: string, password: string): Promise<User | null> {
+  const pool = await getPool() as any;
+  const salt = crypto.randomBytes(16).toString("hex");
+  const passwordHash = hashPassword(password, salt);
+ 
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (username, password_hash, salt, completed_tasks)
+       VALUES ($1, $2, $3, '{}')
+       RETURNING id, username, completed_tasks, created_at`,
+      [username, passwordHash, salt]
+    );
+    return result.rows[0] as User;
+  } catch (err: unknown) {
+    // Username already exists
+    if ((err as { code?: string }).code === "23505") {
+      return null;
+    }
+    throw err;
+  }
+}
+ 
+// Verify user credentials and return user if valid
+export async function verifyUser(username: string, password: string): Promise<User | null> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT id, username, password_hash, salt, completed_tasks, created_at
+     FROM users WHERE username = $1`,
+    [username]
   );
-`;
  
-function mapUser(row: {
-  id: number;
-  username: string;
-  created_at: Date | string;
-}): User {
-  const createdAt =
-    row.created_at instanceof Date
-      ? row.created_at.toISOString()
-      : new Date(row.created_at).toISOString();
+  if (result.rows.length === 0) {
+    return null;
+  }
+ 
+  const row = result.rows[0];
+  const passwordHash = hashPassword(password, row.salt);
+ 
+  if (passwordHash !== row.password_hash) {
+    return null;
+  }
  
   return {
     id: row.id,
     username: row.username,
-    createdAt,
+    completed_tasks: row.completed_tasks || [],
+    created_at: row.created_at,
   };
 }
  
-import type { Pool } from "pg";
- 
-export async function ensureUsersTable() {
-  const pool = (await getPool()) as Pool;
-  await pool.query(USERS_TABLE_SQL);
-}
- 
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltedData = new Uint8Array(salt.length + data.length);
-  saltedData.set(salt);
-  saltedData.set(data, salt.length);
- 
-  const hashBuffer = await crypto.subtle.digest("SHA-256", saltedData);
-  const hashArray = new Uint8Array(hashBuffer);
- 
-  const saltHex = Array.from(salt)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  const hashHex = Array.from(hashArray)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
- 
-  return `${saltHex}:${hashHex}`;
-}
- 
-async function verifyPassword(
-  password: string,
-  storedHash: string
-): Promise<boolean> {
-  const [saltHex, hashHex] = storedHash.split(":");
-  if (!saltHex || !hashHex) return false;
- 
-  const salt = new Uint8Array(
-    saltHex.match(/.{2}/g)!.map((byte) => parseInt(byte, 16))
-  );
- 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const saltedData = new Uint8Array(salt.length + data.length);
-  saltedData.set(salt);
-  saltedData.set(data, salt.length);
- 
-  const hashBuffer = await crypto.subtle.digest("SHA-256", saltedData);
-  const hashArray = new Uint8Array(hashBuffer);
-  const computedHashHex = Array.from(hashArray)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
- 
-  return computedHashHex === hashHex;
-}
- 
-export async function createUser({
-  username,
-  password,
-}: {
-  username: string;
-  password: string;
-}): Promise<User> {
-  await ensureUsersTable();
-  const pool = (await getPool()) as Pool;
-  const passwordHash = await hashPassword(password);
- 
+// Get user by ID
+export async function getUserById(id: number): Promise<User | null> {
+  const pool = await getPool() as any;
   const result = await pool.query(
-    "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, created_at",
-    [username, passwordHash]
+    `SELECT id, username, completed_tasks, created_at
+     FROM users WHERE id = $1`,
+    [id]
   );
  
-  return mapUser(result.rows[0]);
+  if (result.rows.length === 0) {
+    return null;
+  }
+ 
+  return result.rows[0] as User;
 }
  
-export async function getUserByUsername(
-  username: string
-): Promise<(User & { passwordHash: string }) | null> {
-  await ensureUsersTable();
-  const pool = (await getPool()) as Pool;
- 
+// Add a completed task to user's list (if not already completed)
+export async function addCompletedTask(userId: number, problemId: string): Promise<boolean> {
+  const pool = await getPool() as any;
   const result = await pool.query(
-    "SELECT id, username, password_hash, created_at FROM users WHERE username = $1",
-    [username]
+    `UPDATE users
+     SET completed_tasks = array_append(completed_tasks, $2)
+     WHERE id = $1 AND NOT ($2 = ANY(completed_tasks))
+     RETURNING id`,
+    [userId, problemId]
   );
- 
-  if (result.rows.length === 0) return null;
- 
-  const row = result.rows[0];
-  return {
-    ...mapUser(row),
-    passwordHash: row.password_hash,
-  };
+  return result.rowCount !== null && result.rowCount > 0;
 }
  
-export async function validateUser(
-  username: string,
-  password: string
-): Promise<User | null> {
-  const user = await getUserByUsername(username);
-  if (!user) return null;
+// Get user's completed tasks
+export async function getCompletedTasks(userId: number): Promise<string[]> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT completed_tasks FROM users WHERE id = $1`,
+    [userId]
+  );
  
-  const isValid = await verifyPassword(password, user.passwordHash);
-  if (!isValid) return null;
+  if (result.rows.length === 0) {
+    return [];
+  }
  
-  const { passwordHash: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  return result.rows[0].completed_tasks || [];
+}
+// Get all users for leaderboard
+export async function getAllUsers(): Promise<User[]> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT id, username, completed_tasks, created_at
+     FROM users`
+  );
+
+  return result.rows.map((row: User) => ({
+    id: row.id,
+    username: row.username,
+    completed_tasks: row.completed_tasks || [],
+    created_at: row.created_at,
+  }));
 }
