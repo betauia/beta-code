@@ -1,7 +1,12 @@
 ---
+export const prerender = false;
+ 
 import "../styles/global.css";
+import { getCurrentUser } from "../lib/session";
+ 
+const user = await getCurrentUser(Astro.request);
 ---
-
+ 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -19,11 +24,18 @@ import "../styles/global.css";
 				<h1>eta-code</h1>
 			</div>
 			<nav class="site-nav">
-				<a href="">Home</a>
+				<a href="/">Home</a>
 				<a href="/play">Tasks</a>
-				<a href="/signup">Sign Up</a>
+				<a href="/leaderboard">Leaderboard</a>
+				{user ? (
+					<span class="user-info">
+						<span class="username">{user.username}</span>
+						<button id="logoutBtn" class="logout-btn">Logout</button>
+					</span>
+				) : (
+					<a href="/auth">Login</a>
+				)}
 			</nav>
-			
 		</header>
 		<h1>WELLCOME !</h1>
 		<p class="p-text">hei dette er litt tekst for å sjekke fargene </p>
@@ -32,5 +44,14 @@ import "../styles/global.css";
 
 	
 	</body>
-
+	
+		<script>
+			const logoutBtn = document.getElementById('logoutBtn');
+			if (logoutBtn) {
+				logoutBtn.addEventListener('click', async () => {
+					await fetch('/api/logout', { method: 'POST' });
+					window.location.reload();
+				});
+			}
+		</script>
 </html>

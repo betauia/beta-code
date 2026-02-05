@@ -1,6 +1,6 @@
 export const prerender = false;
  
-import { createUser, initUsersTable } from "../../lib/users";
+import { verifyUser, initUsersTable } from "../../lib/users";
 import { createSession, createSessionCookie } from "../../lib/session";
  
 export async function POST({ request }: { request: Request }) {
@@ -20,31 +20,17 @@ export async function POST({ request }: { request: Request }) {
       );
     }
  
-    if (username.length < 3 || username.length > 50) {
-      return new Response(
-        JSON.stringify({ error: "Username must be between 3 and 50 characters" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
- 
-    if (password.length < 6) {
-      return new Response(
-        JSON.stringify({ error: "Password must be at least 6 characters" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
- 
-    // Create the user
-    const user = await createUser(username, password);
+    // Verify credentials
+    const user = await verifyUser(username, password);
  
     if (!user) {
       return new Response(
-        JSON.stringify({ error: "Username already taken" }),
-        { status: 409, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Invalid username or password" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
  
-    // Create session and auto-login
+    // Create session
     const sessionId = createSession(user.id);
     const cookie = createSessionCookie(sessionId);
  
@@ -58,7 +44,7 @@ export async function POST({ request }: { request: Request }) {
         },
       }),
       {
-        status: 201,
+        status: 200,
         headers: {
           "Content-Type": "application/json",
           "Set-Cookie": cookie,
@@ -66,7 +52,7 @@ export async function POST({ request }: { request: Request }) {
       }
     );
   } catch (err) {
-    console.error("Signup error:", err);
+    console.error("Login error:", err);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
