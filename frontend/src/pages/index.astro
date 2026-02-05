@@ -2,6 +2,7 @@
 export const prerender = false;
  
 import "../styles/global.css";
+import Footer from "../components/footer.astro";
 import { getCurrentUser } from "../lib/session";
  
 const user = await getCurrentUser(Astro.request);
@@ -37,12 +38,14 @@ const user = await getCurrentUser(Astro.request);
 				)}
 			</nav>
 		</header>
-		<h1>Competition starts in:</h1>
+		<h1 class="center-page">Competition starts in:</h1>
 		<h1></h1>
 		<p class="p-text"> unknown time</p>
-		<div></div>
+		
+		
+		<Footer />
 
-	
+		
 	</body>
 	
 		<script>
