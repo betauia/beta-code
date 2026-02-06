@@ -1,0 +1,85 @@
+---
+type Problem = { id: string; title: string; points: number };
+
+const { problems, activeId } = Astro.props as {
+  problems: Problem[];
+  activeId?: string;
+};
+---
+
+<aside class="sidebar">
+  <div class="sidebar-title">Tasks</div>
+  <nav class="site-nav">
+			<a href="../../">Home</a>
+			<a href="/play">Tasks</a>
+		</nav>
+
+  <nav class="sidebar-nav">
+    {problems.map((p) => (
+      <a
+        class={`sidebar-link ${activeId === p.id ? "active" : ""}`}
+        href={`/problems/${p.id}`}
+      >
+        <span class="sidebar-link-title">{p.title}</span>
+        <span class="sidebar-link-points">{p.points}p</span>
+      </a>
+    ))}
+  </nav>
+</aside>
+
+<style>
+  .sidebar {
+    width: 260px;
+    min-height: calc(100vh - 0px);
+    padding: 16px;
+    border-right: 1px solid rgba(255,255,255,0.12);
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+  }
+
+  .sidebar-title {
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sidebar-link {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.10);
+  }
+
+  .sidebar-link:hover {
+    border-color: rgba(255,255,255,0.22);
+    background: rgba(0,0,0,0.18);
+  }
+
+  .sidebar-link.active {
+    border-color: rgba(255,255,255,0.35);
+    background: rgba(0,0,0,0.28);
+  }
+
+  .sidebar-link-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-link-points {
+    opacity: 0.8;
+    font-size: 0.9em;
+    flex-shrink: 0;
+  }
+</style>

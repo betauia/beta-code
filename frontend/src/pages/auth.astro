@@ -1,0 +1,299 @@
+---
+export const prerender = false;
+ 
+import "../styles/global.css";
+import { getCurrentUser } from "../lib/session";
+ 
+const user = await getCurrentUser(Astro.request);
+ 
+// If already logged in, redirect to home
+if (user) {
+  return Astro.redirect("/");
+}
+---
+ 
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Sign Up - Login - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <header class="site-header">
+			<div class="header-left">
+				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
+				<h1>eta-code</h1>
+			</div>
+      <nav class="site-nav">
+        <a href="/">Home</a>
+        <a href="/play">Tasks</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="/auth">Login</a>
+      </nav>
+    </header>
+ 
+    <div class="auth-page">
+      <div class="auth-card">
+        <div class="auth-tabs">
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+            <button class="auth-tab active" data-tab="login">Login</button>
+        </div>
+ 
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        <div id="success-message" class="success-message" style="display: none;"></div>
+
+        <!-- Signup Form -->
+        <form id="signup-form" class="auth-form" style="display: none;">
+          <div class="form-group">
+            <label for="signup-username">Username</label>
+            <input type="text" id="signup-username" name="username" required minlength="3" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" name="password" required minlength="6" />
+          </div>
+          <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input type="password" id="signup-confirm" name="confirm" required minlength="6" />
+          </div>
+          <button type="submit" class="auth-button">Create Account</button>
+        </form>
+ 
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form">
+          <div class="form-group">
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" name="username" required minlength="3" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" required minlength="6" />
+          </div>
+          <button type="submit" class="auth-button">Login</button>
+        </form>
+      </div>
+    </div>
+ 
+    <script>
+      const tabs = document.querySelectorAll('.auth-tab');
+      const loginForm = document.getElementById('login-form') as HTMLFormElement;
+      const signupForm = document.getElementById('signup-form') as HTMLFormElement;
+      const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+      const successMessage = document.getElementById('success-message') as HTMLDivElement;
+ 
+      function showError(msg: string) {
+        errorMessage.textContent = msg;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+      }
+ 
+      function showSuccess(msg: string) {
+        successMessage.textContent = msg;
+        successMessage.style.display = 'block';
+        errorMessage.style.display = 'none';
+      }
+ 
+      function hideMessages() {
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+      }
+ 
+      // Tab switching
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab');
+ 
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+ 
+          hideMessages();
+ 
+          if (tabName === 'login') {
+            loginForm.style.display = 'block';
+            signupForm.style.display = 'none';
+          } else {
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'block';
+          }
+        });
+      });
+ 
+      // Login form submission
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideMessages();
+ 
+        const username = (document.getElementById('login-username') as HTMLInputElement).value;
+        const password = (document.getElementById('login-password') as HTMLInputElement).value;
+ 
+        try {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+ 
+          const data = await res.json();
+ 
+          if (res.ok) {
+            showSuccess('Login successful! Redirecting...');
+            setTimeout(() => window.location.href = '/', 1000);
+          } else {
+            showError(data.error || 'Login failed');
+          }
+        } catch (err) {
+          showError('Network error. Please try again.');
+        }
+      });
+ 
+      // Signup form submission
+      signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideMessages();
+ 
+        const username = (document.getElementById('signup-username') as HTMLInputElement).value;
+        const password = (document.getElementById('signup-password') as HTMLInputElement).value;
+        const confirm = (document.getElementById('signup-confirm') as HTMLInputElement).value;
+ 
+        if (password !== confirm) {
+          showError('Passwords do not match');
+          return;
+        }
+ 
+        try {
+          const res = await fetch('/api/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+ 
+          const data = await res.json();
+ 
+          if (res.ok) {
+            showSuccess('Account created! Redirecting...');
+            setTimeout(() => window.location.href = '/', 1000);
+          } else {
+            showError(data.error || 'Signup failed');
+          }
+        } catch (err) {
+          showError('Network error. Please try again.');
+        }
+      });
+    </script>
+ 
+    <style>
+      .auth-page {
+        max-width: 400px;
+        margin: 60px auto;
+        padding: 0 16px;
+      }
+ 
+      .auth-card {
+        background: #111b2b;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+      }
+ 
+      .auth-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+ 
+      .auth-tab {
+        flex: 1;
+        padding: 12px;
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 8px;
+        color: var(--small-text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+ 
+      .auth-tab:hover {
+        border-color: var(--beta-blue);
+      }
+ 
+      .auth-tab.active {
+        background: var(--beta-blue);
+        border-color: var(--beta-blue);
+        color: #fff;
+      }
+ 
+      .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+ 
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        text-align: left;
+      }
+ 
+      .form-group label {
+        font-weight: 600;
+        color: var(--text-color);
+      }
+ 
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #2d3f5f;
+        background: #0c1420;
+        color: var(--text-color);
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+ 
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+ 
+      .auth-button {
+        padding: 14px;
+        background: var(--beta-blue);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+ 
+      .auth-button:hover {
+        opacity: 0.9;
+      }
+ 
+      .error-message {
+        background: rgba(255, 80, 80, 0.1);
+        border: 1px solid rgba(255, 80, 80, 0.4);
+        color: #ff6b6b;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+ 
+      .success-message {
+        background: rgba(80, 255, 120, 0.1);
+        border: 1px solid rgba(80, 255, 120, 0.4);
+        color: #6bff6b;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+    </style>
+  </body>
+</html>

@@ -1,0 +1,341 @@
+---
+import ProblemLayout from "../../layout/ProblemLayout.astro";
+
+const { id } = Astro.params;
+if (!id) throw new Error("Missing problem id in route params");
+---
+
+<ProblemLayout>
+  <section class="problem-page" data-problem-id={id}>
+    <h1>Problem {id}</h1>
+
+    <div class="problem-description">
+      <p>Read an integer and print its double.</p>
+    </div>
+
+    <div class="code-box">
+      <div class="code-box-header">
+        <span class="language-label">C++</span>
+        <button id="copyBtn" class="copy-btn" type="button">Copy</button>
+      </div>
+      <div class="code-editor-wrapper">
+        <div id="lineNumbers" class="line-numbers" aria-hidden="true"></div>
+        <textarea
+          id="code"
+          class="code-editor"
+          spellcheck="false"
+          placeholder="// Write your C++ code here..."
+          set:text="#include <iostream>
+using namespace std;
+
+int main() {
+    int a, b;
+    cin >> a >> b;
+    cout << a + b;
+}
+"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="runBtn" type="button">Run</button>
+    </div>
+
+    <div id="judgeResult" class="judge-result">Ready.</div>
+  </section>
+</ProblemLayout>
+
+<!-- Client-side logic -->
+<script type="module">
+  const root = document.querySelector(".problem-page");
+  if (!root) throw new Error("problem-page root not found");
+
+  const runBtn = root.querySelector("#runBtn");
+  const copyBtn = root.querySelector("#copyBtn");
+  const resultBox = root.querySelector("#judgeResult");
+  const codeEl = root.querySelector("#code");
+  const lineNumbersEl = root.querySelector("#lineNumbers");
+
+  const problemId = root.dataset.problemId;
+
+  // Line numbers synchronization
+  function updateLineNumbers() {
+    const lines = codeEl.value.split("\n");
+    const lineCount = lines.length;
+    
+    const lineNumbersHTML = [];
+    for (let i = 1; i <= lineCount; i++) {
+      lineNumbersHTML.push(`<div class="line-number">${i}</div>`);
+    }
+    lineNumbersEl.innerHTML = lineNumbersHTML.join("");
+  }
+
+  function syncScroll() {
+    lineNumbersEl.scrollTop = codeEl.scrollTop;
+  }
+
+  // Initialize with one line number
+  updateLineNumbers();
+
+  // Update line numbers on input
+  codeEl.addEventListener("input", updateLineNumbers);
+  codeEl.addEventListener("scroll", syncScroll);
+
+  // Handle Tab key for proper indentation
+  codeEl.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const start = codeEl.selectionStart;
+      const end = codeEl.selectionEnd;
+      const value = codeEl.value;
+
+      // Insert 4 spaces
+      codeEl.value = value.substring(0, start) + "    " + value.substring(end);
+      codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+      
+      updateLineNumbers();
+    }
+  });
+
+  // Copy to clipboard
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(codeEl.value);
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => {
+        copyBtn.textContent = "Copy";
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  });
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function pollStatus(jobId) {
+    while (true) {
+      const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
+      const data = await res.json();
+
+      if (data.state === "waiting" || data.state === "active") {
+        resultBox.textContent = "⏳ Running...";
+        await sleep(500);
+        continue;
+      }
+
+      if (data.state === "failed") {
+        resultBox.textContent = "❌ Error: " + (data.error ?? "Unknown");
+        runBtn.disabled = false;
+        return;
+      }
+
+      if (data.state === "completed") {
+        const verdict = data.result?.verdict ?? "Unknown";
+        const map = {
+          Accepted: "✅ Accepted",
+          "Wrong Answer": "❌ Wrong Answer",
+          "Compile Error": "🛠 Compile Error",
+          "Time Limit Exceeded": "⏱ Time Limit Exceeded",
+        };
+        resultBox.textContent = map[verdict] ?? verdict;
+         
+        // Mark task as completed if accepted
+        if (verdict === "Accepted") {
+          fetch("/api/complete-task", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ problemId }),
+          }).catch(() => {}); // Silently fail if not logged in
+        }
+ 
+        runBtn.disabled = false;
+        return;
+      }
+
+      resultBox.textContent = "⚠ Unknown state";
+      runBtn.disabled = false;
+      return;
+    }
+  }
+
+  runBtn.addEventListener("click", async () => {
+    runBtn.disabled = true;
+    resultBox.textContent = "📤 Submitting...";
+
+    const res = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problemId,
+        code: codeEl.value,
+      }),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      resultBox.textContent = "❌ Submit failed (bad JSON response)";
+      runBtn.disabled = false;
+      return;
+    }
+
+    if (!res.ok) {
+      resultBox.textContent = "❌ Submit failed: " + (data?.error ?? res.statusText);
+      runBtn.disabled = false;
+      return;
+    }
+
+    await pollStatus(data.jobId);
+  });
+</script>
+
+<style>
+  .problem-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Code Box Container */
+  .code-box {
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1e1e1e;
+  }
+
+  /* Code Box Header */
+  .code-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #2d2d2d;
+    border-bottom: 1px solid #333;
+  }
+
+  .language-label {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: #888;
+    font-weight: 500;
+  }
+
+  .copy-btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    background: #3a3a3a;
+    color: #eaeaea;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: #4a4a4a;
+  }
+
+  /* Code Editor Wrapper */
+  .code-editor-wrapper {
+    display: flex;
+    position: relative;
+    min-height: 400px;
+    max-height: 600px;
+    background: #1e1e1e;
+  }
+
+  /* Line Numbers */
+  .line-numbers {
+    flex-shrink: 0;
+    width: 50px;
+    background: #252526;
+    color: #858585;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 1rem 0.5rem;
+    text-align: right;
+    user-select: none;
+    overflow-y: hidden;
+    border-right: 1px solid #333;
+    white-space: pre;
+  }
+
+  .line-number {
+    display: block;
+  }
+
+  /* Code Editor */
+  .code-editor {
+    flex: 1;
+    width: 100%;
+    background: transparent;
+    color: #d4d4d4;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 1rem;
+    border: none;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+    white-space: pre;
+    overflow-wrap: normal;
+  }
+
+  .code-editor::placeholder {
+    color: #6a6a6a;
+  }
+
+  /* Inline Code Styling */
+  code {
+    background: #2d2d2d;
+    color: #ce9178;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.9em;
+  }
+
+  /* Actions */
+  .actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  button#runBtn {
+    padding: 0.625rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #0e639c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  button#runBtn:hover:not(:disabled) {
+    background: #1177bb;
+  }
+
+  button#runBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Judge Result */
+  .judge-result {
+    padding: 0.875rem 1rem;
+    background: #252526;
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #d4d4d4;
+  }
+</style>

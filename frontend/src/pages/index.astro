@@ -1,0 +1,60 @@
+---
+export const prerender = false;
+ 
+import "../styles/global.css";
+import Footer from "../components/footer.astro";
+import { getCurrentUser } from "../lib/session";
+ 
+const user = await getCurrentUser(Astro.request);
+---
+ 
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<title>BETA-CODE</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+	</head>
+	<body>
+		<header class="site-header">
+			<div class="header-left">
+				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
+				<h1>eta-code</h1>
+			</div>
+			<nav class="site-nav">
+				<a href="/">Home</a>
+				<a href="/play">Tasks</a>
+				<a href="/leaderboard">Leaderboard</a>
+				{user ? (
+					<span class="user-info">
+						<span class="username">{user.username}</span>
+						<button id="logoutBtn" class="logout-btn">Logout</button>
+					</span>
+				) : (
+					<a href="/auth">Login</a>
+				)}
+			</nav>
+		</header>
+		<h1 class="center-page">Competition starts in:</h1>
+		<h1></h1>
+		<p class="p-text"> unknown time</p>
+		
+		
+		<Footer />
+
+		
+	</body>
+	
+		<script>
+			const logoutBtn = document.getElementById('logoutBtn');
+			if (logoutBtn) {
+				logoutBtn.addEventListener('click', async () => {
+					await fetch('/api/logout', { method: 'POST' });
+					window.location.reload();
+				});
+			}
+		</script>
+</html>
