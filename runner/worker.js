@@ -22,9 +22,6 @@ const JOBS_BASE =
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || "50");
 
-await mkdir(JOBS_BASE, { recursive: true });
-const jobDir = await mkdtemp(join(JOBS_BASE, "job-"));
-
 if (!REDIS_URL) throw new Error("Missing REDIS_URL");
 
 function norm(s) {
@@ -40,6 +37,7 @@ async function runDocker(mountDir) {
     "--pids-limit", "64",
     "--security-opt", "no-new-privileges",
     "--cap-drop", "ALL",
+    "--user", `${process.getuid()}:${process.getgid()}`,
     "-v", `${mountDir}:/sandbox:rw`,
     "cpp-sandbox:latest",
   ];
@@ -48,6 +46,8 @@ async function runDocker(mountDir) {
 }
 
 const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+
+await mkdir(JOBS_BASE, { recursive:  true });
 
 new Worker(
   "submissions",

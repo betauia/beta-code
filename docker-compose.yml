@@ -28,6 +28,7 @@ services:
     build:
       context: ./sandbox
       dockerfile: Dockerfile
+      network: host
     image: cpp-sandbox:latest
     profiles:
       - build-only
