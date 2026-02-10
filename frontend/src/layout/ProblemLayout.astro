@@ -1,9 +1,15 @@
 ---
+export const prerender = false;
+
 import "../styles/global.css";
+import Header from "../components/Header.astro";
 import Sidebar from "../components/Sidebar.astro";
 import { problems } from "../data/problems";
+import { getCurrentUser } from "../lib/session";
 
 const { activeId } = Astro.props as { activeId?: string };
+const user = await getCurrentUser(Astro.request);
+
 ---
 
 <html lang="en">
@@ -14,6 +20,7 @@ const { activeId } = Astro.props as { activeId?: string };
   </head>
 
   <body>
+    <Header user={user} />
     <div class="shell">
       <Sidebar problems={problems} activeId={activeId} />
       <main class="content">

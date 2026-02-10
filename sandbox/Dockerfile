@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy runner script as root and make it executable
 COPY run.sh /usr/local/bin/run.sh
-RUN chmod 755 /usr/local/bin/run.sh
+RUN sed -i 's/\r$//' /usr/local/bin/run.sh && chmod 755 /usr/local/bin/run.sh
 
 # Create non-root user and drop privileges
 RUN useradd -m runner

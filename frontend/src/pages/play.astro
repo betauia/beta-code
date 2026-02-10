@@ -4,6 +4,7 @@ export const prerender = false;
 import "../styles/global.css";
 import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
+import Header from "../components/Header.astro";
  
 const user = await getCurrentUser(Astro.request);
 const completedTasks = user?.completed_tasks || [];
@@ -19,26 +20,7 @@ const completedTasks = user?.completed_tasks || [];
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
 </head>
 
-<header class="site-header">
-			<div class="header-left">
-				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
-				<h1>eta-code</h1>
-			</div>
-			<nav class="site-nav">
-      <a href="/">Home</a>
-      <a href="/play">Tasks</a>
-      <a href="/leaderboard">Leaderboard</a>
-      {user ? (
-        <span class="user-info">
-          <span class="username">{user.username}</span>
-          <button id="logoutBtn" class="logout-btn">Logout</button>
-        </span>
-      ) : (
-        <a href="/auth">Login</a>
-      )}
-    </nav>
-			
-  </header>
+<Header user={null} />
 
   <main style="max-width: 900px; margin: 0 auto; padding: 16px;">
     <h1>All Tasks</h1>
@@ -67,44 +49,7 @@ const completedTasks = user?.completed_tasks || [];
     </ul>
   </main>
  
-  <script>
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        await fetch('/api/logout', { method: 'POST' });
-        window.location.reload();
-      });
-    }
-  </script>
- 
   <style>
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
- 
-    .username {
-      color: var(--beta-blue);
-      font-weight: 600;
-    }
- 
-    .logout-btn {
-      padding: 6px 12px;
-      background: transparent;
-      border: 1px solid var(--small-text);
-      border-radius: 6px;
-      color: var(--small-text);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
- 
-    .logout-btn:hover {
-      border-color: var(--beta-blue);
-      color: var(--beta-blue);
-    }
- 
     .task-item {
       border: 1px solid #333;
       border-radius: 12px;

@@ -3,6 +3,7 @@ export const prerender = false;
  
 import "../styles/global.css";
 import { getCurrentUser } from "../lib/session";
+import Header from "../components/Header.astro";
  
 const user = await getCurrentUser(Astro.request);
  
@@ -23,31 +24,19 @@ if (user) {
 		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
   </head>
   <body>
-    <header class="site-header">
-			<div class="header-left">
-				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
-				<h1>eta-code</h1>
-			</div>
-      <nav class="site-nav">
-        <a href="/">Home</a>
-        <a href="/play">Tasks</a>
-        <a href="/leaderboard">Leaderboard</a>
-        <a href="/auth">Login</a>
-      </nav>
-    </header>
- 
+    <Header user={null} />
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-tabs">
-            <button class="auth-tab" data-tab="signup">Sign Up</button>
-            <button class="auth-tab active" data-tab="login">Login</button>
+            <button class="auth-tab active" data-tab="signup">Sign Up</button>
+            <button class="auth-tab" data-tab="login">Login</button>
         </div>
  
         <div id="error-message" class="error-message" style="display: none;"></div>
         <div id="success-message" class="success-message" style="display: none;"></div>
 
         <!-- Signup Form -->
-        <form id="signup-form" class="auth-form" style="display: none;">
+        <form id="signup-form" class="auth-form">
           <div class="form-group">
             <label for="signup-username">Username</label>
             <input type="text" id="signup-username" name="username" required minlength="3" maxlength="50" />
@@ -64,7 +53,7 @@ if (user) {
         </form>
  
         <!-- Login Form -->
-        <form id="login-form" class="auth-form">
+        <form id="login-form" class="auth-form" style="display: none;">
           <div class="form-group">
             <label for="login-username">Username</label>
             <input type="text" id="login-username" name="username" required minlength="3" maxlength="50" />

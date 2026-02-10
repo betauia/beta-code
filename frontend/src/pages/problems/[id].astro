@@ -1,5 +1,6 @@
 ---
 import ProblemLayout from "../../layout/ProblemLayout.astro";
+import Header from "../../components/Header.astro";
 
 const { id } = Astro.params;
 if (!id) throw new Error("Missing problem id in route params");
