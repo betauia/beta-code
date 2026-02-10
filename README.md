@@ -30,3 +30,9 @@ And then type
 ```bash
 npm run stop
 ```
+
+## Admin panel
+
+Username: `admin`
+
+Password: `admin123`
