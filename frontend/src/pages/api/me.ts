@@ -18,6 +18,7 @@ export async function GET({ request }: { request: Request }) {
         id: user.id,
         username: user.username,
         completed_tasks: user.completed_tasks,
+        is_admin: user.is_admin,
       },
     }),
     { status: 200, headers: { "Content-Type": "application/json" } }

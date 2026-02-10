@@ -5,6 +5,7 @@ import "../styles/global.css";
 import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
+import Header from "../components/Header.astro";
 
 const user = await getCurrentUser(Astro.request);
 let users: User[] = [];
@@ -18,6 +19,7 @@ try {
 const pointsById = new Map(problems.map((problem) => [problem.id, problem.points]));
 
 const leaderboard = users
+.filter((entry) => !entry.is_admin)
   .map((entry) => {
     const completed = entry.completed_tasks || [];
     const totalPoints = completed.reduce((sum, taskId) => sum + (pointsById.get(taskId) ?? 0), 0);
@@ -50,25 +52,7 @@ const currentUserIndex = user
 		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
   </head>
   <body>
-    <header class="site-header">
-			<div class="header-left">
-				<img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
-				<h1>eta-code</h1>
-			</div>
-      <nav class="site-nav">
-        <a href="/">Home</a>
-        <a href="/play">Tasks</a>
-        <a href="/leaderboard">Leaderboard</a>
-        {user ? (
-          <span class="user-info">
-            <span class="username">{user.username}</span>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-          </span>
-        ) : (
-          <a href="/auth">Login</a>
-        )}
-      </nav>
-    </header>
+     <Header user={user} />
 
     <main class="leaderboard-page">
       <div class="leaderboard-intro">
@@ -111,43 +95,7 @@ const currentUserIndex = user
       )}
     </main>
 
-    <script>
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-          await fetch('/api/logout', { method: 'POST' });
-          window.location.reload();
-        });
-      }
-    </script>
-
     <style>
-      .user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .username {
-        color: var(--beta-blue);
-        font-weight: 600;
-      }
-
-      .logout-btn {
-        padding: 6px 12px;
-        background: transparent;
-        border: 1px solid var(--small-text);
-        border-radius: 6px;
-        color: var(--small-text);
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .logout-btn:hover {
-        border-color: var(--beta-blue);
-        color: var(--beta-blue);
-      }
 
       .leaderboard-page {
         max-width: 960px;
