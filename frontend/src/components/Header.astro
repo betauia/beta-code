@@ -15,6 +15,7 @@ const { user } = Astro.props;
     <a href="/">Home</a>
     <a href="/play">Tasks</a>
     <a href="/leaderboard">Leaderboard</a>
+    {user?.is_admin && <a href="/admin">Admin Panel</a>}
     {user ? (
       <span class="user-info">
         <span class="username">{user.username}</span>
@@ -23,7 +24,7 @@ const { user } = Astro.props;
     ) : (
       <a href="/auth">Login</a>
     )}
-    {user?.is_admin && <a href="/admin">Admin</a>}
+    
   </nav>
 </header>
  

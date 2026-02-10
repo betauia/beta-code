@@ -5,6 +5,7 @@ import "../styles/global.css";
 import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
+import Header from "../components/Header.astro";
  
 const user = await getCurrentUser(Astro.request);
  
@@ -34,22 +35,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
   </head>
   <body>
-    <header class="site-header">
-      <div class="header-left">
-        <img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
-        <h1>eta-code</h1>
-      </div>
-      <nav class="site-nav">
-        <a href="/">Home</a>
-        <a href="/play">Tasks</a>
-        <a href="/leaderboard">Leaderboard</a>
-        <a href="/admin">Admin</a>
-        <span class="user-info">
-          <span class="username">{user.username}</span>
-          <button id="logoutBtn" class="logout-btn">Logout</button>
-        </span>
-      </nav>
-    </header>
+    <Header user={user} />
  
     <main class="admin-page">
       <div class="admin-intro">
