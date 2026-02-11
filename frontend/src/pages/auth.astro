@@ -120,7 +120,7 @@ if (user) {
         const password = (document.getElementById('login-password') as HTMLInputElement).value;
  
         try {
-          const res = await fetch('/api/login', {
+          const res = await fetch('/api/user/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -154,7 +154,7 @@ if (user) {
         }
  
         try {
-          const res = await fetch('/api/signup', {
+          const res = await fetch('/api/user/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
