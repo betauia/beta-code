@@ -111,7 +111,7 @@ const starterCode = getStarterCode(id);
 
   async function pollStatus(jobId) {
     while (true) {
-      const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
+      const res = await fetch(`/api/problems/status?jobId=${encodeURIComponent(jobId)}`);
       const data = await res.json();
 
       if (data.state === "waiting" || data.state === "active") {
@@ -138,7 +138,7 @@ const starterCode = getStarterCode(id);
          
         // Mark task as completed if accepted
         if (verdict === "Accepted") {
-          fetch("/api/complete-task", {
+          fetch("/api/problems/complete-task", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ problemId }),
@@ -159,7 +159,7 @@ const starterCode = getStarterCode(id);
     runBtn.disabled = true;
     resultBox.textContent = "📤 Submitting...";
 
-    const res = await fetch("/api/submit", {
+    const res = await fetch("/api/problems/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

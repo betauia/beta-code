@@ -1,7 +1,7 @@
 export const prerender = false;
  
-import { getCurrentUser } from "../../lib/session";
-import { addCompletedTask } from "../../lib/users";
+import { getCurrentUser } from "../../../lib/session";
+import { addCompletedTask } from "../../../lib/users";
  
 export async function POST({ request }: { request: Request }) {
   const user = await getCurrentUser(request);

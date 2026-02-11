@@ -4,7 +4,7 @@ import {
   getSessionIdFromCookies,
   deleteSession,
   clearSessionCookie,
-} from "../../lib/session";
+} from "../../../lib/session";
  
 export async function POST({ request }: { request: Request }) {
   const cookieHeader = request.headers.get("cookie");

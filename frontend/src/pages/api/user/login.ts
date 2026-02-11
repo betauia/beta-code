@@ -1,7 +1,7 @@
 export const prerender = false;
  
-import { verifyUser, initUsersTable } from "../../lib/users";
-import { createSession, createSessionCookie } from "../../lib/session";
+import { verifyUser, initUsersTable } from "../../../lib/users";
+import { createSession, createSessionCookie } from "../../../lib/session";
  
 export async function POST({ request }: { request: Request }) {
   try {

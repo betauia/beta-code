@@ -1,6 +1,6 @@
 export const prerender = false;
  
-import { getCurrentUser } from "../../lib/session";
+import { getCurrentUser } from "../../../lib/session";
  
 export async function GET({ request }: { request: Request }) {
   const user = await getCurrentUser(request);
