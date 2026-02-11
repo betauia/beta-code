@@ -1,9 +1,12 @@
 ---
 import ProblemLayout from "../../layout/ProblemLayout.astro";
-import Header from "../../components/Header.astro";
+import { getStarterCode, getProblem } from "../../data/problems";
 
 const { id } = Astro.params;
 if (!id) throw new Error("Missing problem id in route params");
+
+const problem = getProblem(id);
+const starterCode = getStarterCode(id);
 ---
 
 <ProblemLayout>
@@ -26,15 +29,7 @@ if (!id) throw new Error("Missing problem id in route params");
           class="code-editor"
           spellcheck="false"
           placeholder="// Write your C++ code here..."
-          set:text="#include <iostream>
-using namespace std;
-
-int main() {
-    int a, b;
-    cin >> a >> b;
-    cout << a + b;
-}
-"
+          set:text={starterCode}
         ></textarea>
       </div>
     </div>
