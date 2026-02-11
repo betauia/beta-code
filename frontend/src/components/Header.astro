@@ -8,8 +8,10 @@ const { user } = Astro.props;
  
 <header class="site-header">
   <div class="header-left">
-    <img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo">
-    <h1>eta-code</h1>
+    <a href="/"><img class="logo" src="../pictures/betaiconJustb.webp" alt="Beta-code logo"></a>
+    <h1 class="logo-name">
+      <a href="/" class="logo-name">eta-code</a>
+    </h1>
   </div>
   <nav class="site-nav">
     <a href="/">Home</a>
@@ -64,5 +66,10 @@ const { user } = Astro.props;
   .logout-btn:hover {
     border-color: var(--beta-blue);
     color: var(--beta-blue);
+  }
+
+  .logo-name {
+    text-decoration: none;
+    color: inherit; 
   }
 </style>
