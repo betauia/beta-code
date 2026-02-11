@@ -142,7 +142,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
       const logoutBtn = document.getElementById('logoutBtn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
-          await fetch('/api/logout', { method: 'POST' });
+          await fetch('/api/user/logout', { method: 'POST' });
           window.location.href = '/';
         });
       }
@@ -154,7 +154,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           const username = btn.getAttribute('data-username');
           if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return;
  
-          const res = await fetch('/api/admin/delete-user', {
+          const res = await fetch('/api/user/admin/delete-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: Number(userId) }),
@@ -175,7 +175,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           const userId = btn.getAttribute('data-user-id');
           const problemId = btn.getAttribute('data-problem-id');
  
-          const res = await fetch('/api/admin/update-tasks', {
+          const res = await fetch('/api/admin/user/update-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: Number(userId), problemId, action: 'remove' }),
@@ -197,7 +197,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           const problemId = select.value;
           if (!problemId) return;
  
-          const res = await fetch('/api/admin/update-tasks', {
+          const res = await fetch('/api/admin/user/update-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: Number(userId), problemId, action: 'add' }),
