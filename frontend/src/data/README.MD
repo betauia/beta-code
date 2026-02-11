@@ -34,12 +34,12 @@ int main() {
 
 ## Step 2: Create test cases
 
-1. Go to the `runner_problems` folder in `root`
+1. Go to the `runner/problems` folder in `root`
 2. Create a new folder with the same `id` as your problem (e.g., `3`)
 3. Inside that folder, create a file named `tests.json`
 4. Add your test cases
 
-Example `runner_problems/3/tests.json`:
+Example `runner/problems/3/tests.json`:
 
 ```json
 [

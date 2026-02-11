@@ -14,11 +14,11 @@ const REDIS_URL = process.env.REDIS_URL;
 
 const PROBLEMS_DIR =
   process.env.PROBLEMS_DIR ||
-  join(__dirname, "..", "runner_problems");
+  join(__dirname, "problems");
 
 const JOBS_BASE =
   process.env.JOBS_BASE ||
-  join(__dirname, "..", "runner_jobs");
+  join(__dirname, "jobs");
 
 const CONCURRENCY = Number(process.env.CONCURRENCY || "50");
 
