@@ -34,7 +34,7 @@ const { user } = Astro.props;
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch('/api/user/logout', { method: 'POST' });
       window.location.reload();
     });
   }
