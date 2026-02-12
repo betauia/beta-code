@@ -1,0 +1,30 @@
+[
+  {
+    "name": "sample1",
+    "input": "",
+    "expected": "25.00",
+    "hidden": false,
+    "files": ["data.json"]
+  },
+  {
+    "name": "sample2",
+    "input": "",
+    "expected": "99.00",
+    "hidden": false,
+    "files": ["data.json"]
+  },
+  {
+    "name": "hidden1",
+    "input": "",
+    "expected": "2504.98",
+    "hidden": true,
+    "files": ["data.json"]
+  },
+  {
+    "name": "hidden2",
+    "input": "",
+    "expected": "0.01",
+    "hidden": true,
+    "files": ["data.json"]
+  }
+]

@@ -13,14 +13,21 @@ const starterCode = getStarterCode(id);
   <section class="problem-page" data-problem-id={id}>
     <h1>Problem {id}</h1>
 
+    {problem?.type === "solve" && (
+      <div class="task-type-badge solve-badge">Solve</div>
+    )}
+
+    {problem?.type === "fix" && (
+      <div class="task-type-badge fix-badge">Bug Fix</div>
+    )}
+
     <div class="problem-description">
-      <p>Read an integer and print its double.</p>
+      <p>{problem?.description}</p>
     </div>
 
     <div class="code-box">
       <div class="code-box-header">
         <span class="language-label">C++</span>
-        <button id="copyBtn" class="copy-btn" type="button">Copy</button>
       </div>
       <div class="code-editor-wrapper">
         <div id="lineNumbers" class="line-numbers" aria-hidden="true"></div>
@@ -35,9 +42,20 @@ const starterCode = getStarterCode(id);
     </div>
 
     <div class="actions">
+      <!-- Download data file if there is one to the task -->
+      {problem?.dataFile && (
+        <a
+          href={`/api/problems/data?problemId=${id}`}
+          class="download-btn"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download {problem.dataFile}
+        </a>
+      )}
+
+      <!-- Button to run the code -->
       <button id="runBtn" type="button">Run</button>
     </div>
-
     <div id="judgeResult" class="judge-result">Ready.</div>
   </section>
 </ProblemLayout>
@@ -48,7 +66,6 @@ const starterCode = getStarterCode(id);
   if (!root) throw new Error("problem-page root not found");
 
   const runBtn = root.querySelector("#runBtn");
-  const copyBtn = root.querySelector("#copyBtn");
   const resultBox = root.querySelector("#judgeResult");
   const codeEl = root.querySelector("#code");
   const lineNumbersEl = root.querySelector("#lineNumbers");
@@ -91,19 +108,6 @@ const starterCode = getStarterCode(id);
       codeEl.selectionStart = codeEl.selectionEnd = start + 4;
       
       updateLineNumbers();
-    }
-  });
-
-  // Copy to clipboard
-  copyBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(codeEl.value);
-      copyBtn.textContent = "Copied!";
-      setTimeout(() => {
-        copyBtn.textContent = "Copy";
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
     }
   });
 
@@ -194,6 +198,29 @@ const starterCode = getStarterCode(id);
     gap: 1rem;
   }
 
+   .task-type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+  }
+
+  .solve-badge {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+ 
+  .fix-badge {
+    background: rgba(230, 126, 34, 0.15);
+    color: #e67e22;
+    border: 1px solid rgba(230, 126, 34, 0.3);
+  }
+
   /* Code Box Container */
   .code-box {
     border: 1px solid #333;
@@ -217,21 +244,6 @@ const starterCode = getStarterCode(id);
     font-size: 0.85rem;
     color: #888;
     font-weight: 500;
-  }
-
-  .copy-btn {
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8rem;
-    background: #3a3a3a;
-    color: #eaeaea;
-    border: 1px solid #4a4a4a;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .copy-btn:hover {
-    background: #4a4a4a;
   }
 
   /* Code Editor Wrapper */
@@ -299,7 +311,29 @@ const starterCode = getStarterCode(id);
   /* Actions */
   .actions {
     display: flex;
-    gap: 1rem;
+        align-items: center;
+  }
+ 
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ccc;
+    background: #2d2d2d;
+    border: 1px solid #4a4a4a;
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+ 
+  .download-btn:hover {
+    background: #3a3a3a;
+    border-color: #666;
+    color: #fff;
   }
 
   button#runBtn {

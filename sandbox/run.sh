@@ -27,10 +27,23 @@ for infile in $tests; do
   name=$(basename "$infile" .in)
   outfile="/sandbox/outs/$name.out"
 
+  # Copy per-test input files (e.g. JSON) into /sandbox/ if they exist
+  testdata_dir="/sandbox/testdata/$name"
+  if [ -d "$testdata_dir" ]; then
+    cp "$testdata_dir"/* /sandbox/ 2>/dev/null || true
+  fi
+
   set +e
   timeout 2s /sandbox/main < "$infile" > "$outfile" 2> /sandbox/run_stderr.txt
   code=$?
   set -e
+
+  # Clean up per-test files so they don't leak into the next test
+  if [ -d "$testdata_dir" ]; then
+    for f in "$testdata_dir"/*; do
+      rm -f "/sandbox/$(basename "$f")" 2>/dev/null || true
+    done
+  fi
 
   status="OK"
   if [ "$code" -ne 0 ]; then
