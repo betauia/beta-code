@@ -18,6 +18,7 @@ export interface Problem {
   points: number;
   type: ProblemType;
   starterCode: string;
+  dataFile?: string;
 }
 
 export const problems: Problem[] = [
@@ -106,6 +107,7 @@ int main() {
     tags: ["file-io", "parsing"],
     points: 100,
     type: "fix",
+    dataFile: "data.json",
     starterCode: `#include <iostream>
 #include <fstream>
 #include <string>
@@ -161,6 +163,7 @@ int main() {
     tags: ["file-io", "csv", "debugging"],
     points: 100,
     type: "fix",
+    dataFile: "data.csv",
     starterCode: `#include <iostream>
 #include <fstream>
 #include <sstream>
@@ -237,6 +240,7 @@ int main() {
     tags: ["file-io", "csv"],
     points: 75,
     type: "solve",
+    dataFile: "data.csv",
     starterCode: `#include <iostream>
 #include <fstream>
 #include <sstream>
@@ -257,6 +261,7 @@ int main() {
     tags: ["file-io", "json"],
     points: 75,
     type: "solve",
+    dataFile: "data.json",
     starterCode: `#include <iostream>
 #include <fstream>
 #include <string>

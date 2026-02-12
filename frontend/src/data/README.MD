@@ -14,10 +14,12 @@ export const problems: Problem[] = [
   
   {
     id: "3",
-    title: "Reverse String",
+    title: "FizzBuzz",
+    description: "A decription of the task",
     difficulty: "Easy",
-    tags: ["strings", "basics"],
-    points: 100,
+    tags: ["math", "io"],
+    points: 75,
+    type: "solve",
     starterCode: `#include <iostream>
 #include <string>
 using namespace std;
