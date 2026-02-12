@@ -1,0 +1,30 @@
+[
+  {
+    "name": "sample1",
+    "input": "",
+    "expected": "Bob",
+    "hidden": false,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "sample2",
+    "input": "",
+    "expected": "Zara",
+    "hidden": false,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "hidden1",
+    "input": "",
+    "expected": "Gamma",
+    "hidden": true,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "hidden2",
+    "input": "",
+    "expected": "Solo",
+    "hidden": true,
+    "files": ["data.csv"]
+  }
+]

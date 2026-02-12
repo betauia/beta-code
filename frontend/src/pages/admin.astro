@@ -154,7 +154,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           const username = btn.getAttribute('data-username');
           if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return;
  
-          const res = await fetch('/api/user/admin/delete-user', {
+          const res = await fetch('/api/admin/delete-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: Number(userId) }),

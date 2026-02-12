@@ -55,7 +55,8 @@ new Worker(
     const { problemId, code } = job.data ?? {};
     if (!problemId || !code) throw new Error("Missing problemId/code");
 
-    const testsPath = join(PROBLEMS_DIR, problemId, "tests.json");
+    const problemDir = join(PROBLEMS_DIR, problemId);
+    const testsPath = join(problemDir, "tests.json");
     const tests = JSON.parse(await readFile(testsPath, "utf8"));
 
     const jobDir = await mkdtemp(join(JOBS_BASE, "job-"));
@@ -66,7 +67,28 @@ new Worker(
 
       await writeFile(join(jobDir, "main.cpp"), String(code), "utf8");
       for (const t of tests) {
-        await writeFile(join(jobDir, "tests", `${t.name}.in`), t.input, "utf8");
+        await writeFile(join(jobDir, "tests", `${t.name}.in`), t.input ?? "", "utf8");
+ 
+        // Write optional per-test files (e.g. CSV, JSON) into testdata/{testname}/
+        if (t.files) {
+          const testDataDir = join(jobDir, "testdata", t.name);
+          await mkdir(testDataDir, { recursive: true });
+ 
+          if (Array.isArray(t.files)) {
+            // Array of filenames — look in problemDir/{testName}/ first, then problemDir/
+            for (const filename of t.files) {
+              const perTestSrc = join(problemDir, t.name, filename);
+              const sharedSrc = join(problemDir, filename);
+              const content = await readFile(perTestSrc).catch(() => readFile(sharedSrc));
+              await writeFile(join(testDataDir, filename), content);
+            }
+          } else if (typeof t.files === "object") {
+            // Inline content map (backward compat)
+            for (const [filename, content] of Object.entries(t.files)) {
+              await writeFile(join(testDataDir, filename), String(content), "utf8");
+            }
+          }
+        }
       }
 
       await runDocker(jobDir);

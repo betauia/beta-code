@@ -1,32 +1,32 @@
 [
   {
     "name": "sample1",
-    "input": "hello\n",
-    "expected": "1",
+    "input": "5\n",
+    "expected": "15",
     "hidden": false
   },
   {
     "name": "sample2",
-    "input": "beekeeper\n",
-    "expected": "4",
+    "input": "1\n",
+    "expected": "1",
     "hidden": false
   },
   {
     "name": "sample3",
-    "input": "xyz\n",
-    "expected": "0",
+    "input": "10\n",
+    "expected": "55",
     "hidden": false
   },
   {
     "name": "hidden1",
-    "input": "eeee\n",
-    "expected": "4",
+    "input": "100\n",
+    "expected": "5050",
     "hidden": true
   },
   {
     "name": "hidden2",
-    "input": "abcdefghijklmnopqrstuvwxyz\n",
-    "expected": "1",
+    "input": "0\n",
+    "expected": "0",
     "hidden": true
   }
 ]

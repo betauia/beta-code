@@ -39,7 +39,11 @@ const completedTasks = user?.completed_tasks || [];
                   {isCompleted && <span class="check-mark">✓ </span>}
                   {t.title}
                 </strong>
-                <div class="p-text">Difficulty: {t.difficulty}  |  Points: {t.points}</div>
+                <div class="p-text">
+                  {t.type === "solve" && <span class="type-tag solve-tag">Solve</span>}
+                  {t.type === "fix" && <span class="type-tag fix-tag">Bug Fix</span>}
+                  Difficulty: {t.difficulty}  |  Points: {t.points}
+                </div>
               </div>
               <a href={`/problems/${t.id}`}>Open</a>
             </div>
@@ -63,6 +67,29 @@ const completedTasks = user?.completed_tasks || [];
  
     .check-mark {
       color: #2d8a4e;
+    }
+
+     
+    .type-tag {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 0.5rem;
+    }
+
+    .solve-tag {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+ 
+    .fix-tag {
+      background: rgba(230, 126, 34, 0.15);
+      color: #e67e22;
+      border: 1px solid rgba(230, 126, 34, 0.3);
     }
   </style>
 </body>

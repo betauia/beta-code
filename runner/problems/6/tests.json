@@ -1,0 +1,37 @@
+[
+  {
+    "name": "sample1",
+    "input": "score\n",
+    "expected": "88.50",
+    "hidden": false,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "sample2",
+    "input": "name\n",
+    "expected": "NOT_FOUND",
+    "hidden": false,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "sample3",
+    "input": "price\n",
+    "expected": "12.33",
+    "hidden": false,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "hidden1",
+    "input": "value\n",
+    "expected": "5.50",
+    "hidden": true,
+    "files": ["data.csv"]
+  },
+  {
+    "name": "hidden2",
+    "input": "temp\n",
+    "expected": "20.10",
+    "hidden": true,
+    "files": ["data.csv"]
+  }
+]

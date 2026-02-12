@@ -20,6 +20,7 @@ const { problems, activeId } = Astro.props as {
         class={`sidebar-link ${activeId === p.id ? "active" : ""}`}
         href={`/problems/${p.id}`}
       >
+        <span class="sidebar-link-title">{p.id}</span>
         <span class="sidebar-link-title">{p.title}</span>
         <span class="sidebar-link-points">{p.points}p</span>
       </a>
@@ -38,7 +39,7 @@ const { problems, activeId } = Astro.props as {
     align-self: flex-start;
   }
 
-  .sidebar-title {
+  .sidebar-id {
     font-weight: 700;
     margin-bottom: 12px;
   }
