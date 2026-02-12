@@ -1,0 +1,30 @@
+[
+  {
+    "name": "sample1",
+    "input": "Alice\n",
+    "expected": "95",
+    "hidden": false,
+    "files": ["data.json"]
+  },
+  {
+    "name": "sample2",
+    "input": "Bob\n",
+    "expected": "82",
+    "hidden": false,
+    "files": ["data.json"]
+  },
+  {
+    "name": "sample3",
+    "input": "Charlie\n",
+    "expected": "NOT_FOUND",
+    "hidden": false,
+    "files": ["data.json"]
+  },
+  {
+    "name": "hidden1",
+    "input": "Zara\n",
+    "expected": "100",
+    "hidden": true,
+    "files": ["data.json"]
+  }
+]

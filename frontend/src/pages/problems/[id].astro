@@ -13,8 +13,16 @@ const starterCode = getStarterCode(id);
   <section class="problem-page" data-problem-id={id}>
     <h1>Problem {id}</h1>
 
+    {problem?.type === "solve" && (
+      <div class="task-type-badge solve-badge">Solve</div>
+    )}
+
+    {problem?.type === "fix" && (
+      <div class="task-type-badge fix-badge">Bug Fix</div>
+    )}
+
     <div class="problem-description">
-      <p>Read an integer and print its double.</p>
+      <p>{problem?.description}</p>
     </div>
 
     <div class="code-box">
@@ -192,6 +200,29 @@ const starterCode = getStarterCode(id);
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+   .task-type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+  }
+
+  .solve-badge {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+ 
+  .fix-badge {
+    background: rgba(230, 126, 34, 0.15);
+    color: #e67e22;
+    border: 1px solid rgba(230, 126, 34, 0.3);
   }
 
   /* Code Box Container */
