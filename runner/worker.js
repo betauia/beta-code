@@ -39,6 +39,7 @@ async function runDocker(mountDir) {
     "--cap-drop", "ALL",
     "--user", `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`,
     "-v", `${mountDir}:/sandbox:rw`,
+    "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
     "cpp-sandbox:latest",
   ];
 
@@ -65,31 +66,42 @@ new Worker(
       await mkdir(join(jobDir, "tests"), { recursive: true });
       await mkdir(join(jobDir, "outs"), { recursive: true });
 
-      await writeFile(join(jobDir, "main.cpp"), String(code), "utf8");
+      // Write source code and all test inputs in parallel for faster setup
+      const writeOps = [
+        writeFile(join(jobDir, "main.cpp"), String(code), "utf8"),
+      ];
       for (const t of tests) {
-        await writeFile(join(jobDir, "tests", `${t.name}.in`), t.input ?? "", "utf8");
+        writeOps.push(
+          writeFile(join(jobDir, "tests", `${t.name}.in`), t.input ?? "", "utf8")
+        );
  
         // Write optional per-test files (e.g. CSV, JSON) into testdata/{testname}/
         if (t.files) {
           const testDataDir = join(jobDir, "testdata", t.name);
-          await mkdir(testDataDir, { recursive: true });
- 
-          if (Array.isArray(t.files)) {
-            // Array of filenames — look in problemDir/{testName}/ first, then problemDir/
-            for (const filename of t.files) {
-              const perTestSrc = join(problemDir, t.name, filename);
-              const sharedSrc = join(problemDir, filename);
-              const content = await readFile(perTestSrc).catch(() => readFile(sharedSrc));
-              await writeFile(join(testDataDir, filename), content);
-            }
-          } else if (typeof t.files === "object") {
-            // Inline content map (backward compat)
-            for (const [filename, content] of Object.entries(t.files)) {
-              await writeFile(join(testDataDir, filename), String(content), "utf8");
-            }
-          }
+          writeOps.push(
+            mkdir(testDataDir, { recursive: true }).then(async () => {
+              if (Array.isArray(t.files)) {
+                // Array of filenames — look in problemDir/{testName}/ first, then problemDir/
+                await Promise.all(t.files.map(async (filename) => {
+                  const perTestSrc = join(problemDir, t.name, filename);
+                  const sharedSrc = join(problemDir, filename);
+                  const content = await readFile(perTestSrc).catch(() => readFile(sharedSrc));
+                  await writeFile(join(testDataDir, filename), content);
+                }));
+              } else if (typeof t.files === "object") {
+                // Inline content map (backward compat)
+                await Promise.all(
+                  Object.entries(t.files).map(([filename, content]) =>
+                    writeFile(join(testDataDir, filename), String(content), "utf8")
+                  )
+                );
+              }
+            })
+          );
         }
       }
+
+      await Promise.all(writeOps);
 
       await runDocker(jobDir);
 
