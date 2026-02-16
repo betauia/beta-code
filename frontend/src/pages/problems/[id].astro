@@ -113,6 +113,20 @@ const starterCode = getStarterCode(id);
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  function showResult(headerText, detailsText) {
+    resultBox.textContent = "";
+    const h = document.createElement("div");
+    h.className = "verdict-header";
+    h.textContent = headerText;
+    resultBox.appendChild(h);
+    if (detailsText) {
+      const pre = document.createElement("pre");
+      pre.className = "error-details";
+      pre.textContent = detailsText;
+      resultBox.appendChild(pre);
+    }
+  }
+
   async function pollStatus(jobId) {
     while (true) {
       const res = await fetch(`/api/problems/status?jobId=${encodeURIComponent(jobId)}`);
@@ -132,14 +146,52 @@ const starterCode = getStarterCode(id);
 
       if (data.state === "completed") {
         const verdict = data.result?.verdict ?? "Unknown";
-        const map = {
+        const result = data.result ?? {};
+
+        // Build rich output
+        const headerMap = {
           Accepted: "✅ Accepted",
           "Wrong Answer": "❌ Wrong Answer",
           "Compile Error": "🛠 Compile Error",
+          "Runtime Error": "💥 Runtime Error",
           "Time Limit Exceeded": "⏱ Time Limit Exceeded",
         };
-        resultBox.textContent = map[verdict] ?? verdict;
-         
+
+        const header = headerMap[verdict] ?? verdict;
+        let details = "";
+
+        if (verdict === "Compile Error" && result.error) {
+          details = result.error;
+        } else if (verdict === "Runtime Error") {
+          if (result.failedTest) {
+            details += `Failed on test: ${result.failedTest}\n`;
+          }
+          if (result.input) {
+            details += `\n--- Input ---\n${result.input}\n`;
+          }
+          if (result.error) {
+            details += `\n--- Error ---\n${result.error}`;
+          }
+        } else if (verdict === "Time Limit Exceeded") {
+          if (result.failedTest) {
+            details = `Exceeded time limit on test: ${result.failedTest}`;
+          }
+          if (result.input) {
+            details += `\n\n--- Input ---\n${result.input}`;
+          }
+        } else if (verdict === "Wrong Answer" && result.tests) {
+          const failed = result.tests.find((t) => t.status === "WA");
+          if (failed && failed.name !== "hidden") {
+            details += `\n--- Input ---\n${failed.input ?? ""}`;
+            details += `\n--- Expected ---\n${failed.expected ?? ""}\n`;
+            details += `\n--- Your Output ---\n${failed.output ?? ""}`;
+          } else if (failed) {
+            details = "Failed on a hidden test.";
+          }
+        }
+
+        showResult(header, details);
+
         // Mark task as completed if accepted
         if (verdict === "Accepted") {
           fetch("/api/problems/complete-task", {
@@ -148,7 +200,7 @@ const starterCode = getStarterCode(id);
             body: JSON.stringify({ problemId }),
           }).catch(() => {}); // Silently fail if not logged in
         }
- 
+
         runBtn.disabled = false;
         return;
       }
@@ -360,12 +412,34 @@ const starterCode = getStarterCode(id);
   /* Judge Result */
   .judge-result {
     padding: 0.875rem 1rem;
-    background: #252526;
+    background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 6px;
     font-family: "JetBrains Mono", "Consolas", monospace;
     font-weight: 600;
     font-size: 0.95rem;
     color: #d4d4d4;
+  }
+
+  .verdict-header {
+    margin-bottom: 0.25rem;
+  }
+
+  .error-details {
+    margin: 0.5rem 0 0 0;
+    padding: 0.75rem;
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: #f48771;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.5;
   }
 </style>

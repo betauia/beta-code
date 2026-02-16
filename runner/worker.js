@@ -122,6 +122,7 @@ new Worker(
           verdict: execFail.status === "TLE" ? "Time Limit Exceeded" : "Runtime Error",
           failedTest: def?.hidden ? "hidden" : execFail.name,
           error: def?.hidden ? undefined : runErr,
+          input: def?.hidden ? undefined : def?.input,
         };
       }
 
@@ -138,6 +139,7 @@ new Worker(
           status: ok ? "OK" : "WA",
           output: t.hidden ? undefined : got,
           expected: t.hidden ? undefined : t.expected,
+          input: t.hidden ? undefined : t.input,
         });
 
         if (!ok) break;

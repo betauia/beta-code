@@ -137,7 +137,7 @@ async function simulateUser(userId) {
           userId,
           tag,
           status: "DONE",
-          verdict: data.result?.verdict || "unknown",
+          verdict: data.result?.verdict || "Internal Error (no verdict)",
           elapsed,
           submitTime,
           execTime: elapsed - submitTime,
