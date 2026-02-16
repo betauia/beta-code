@@ -273,4 +273,66 @@ int main() {
 }
 `,
   },
+  {
+    id: "9",
+    title: "CSV Score reader",
+    description:
+      "Read the file `data.csv` and find everyone that has the a score that will be inputed",
+    difficulty: "Medium",
+    tags: ["file-io", "csv"],
+    points: 75,
+    type: "solve",
+    dataFile: "data.csv",
+    starterCode: `#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+using namespace std;
+
+int main() {
+    ifstream file("data.csv");
+    if (!file.is_open()) {
+        cout << "ERROR" << endl;
+        return 1;
+    }
+
+    double targetScore;
+    cin >> targetScore;
+
+    // Read header row
+    string header;
+    getline(file, header);
+
+    // Read data rows and find matching scores
+    string row;
+    while (getline(file, row)) {
+        stringstream rss(row);
+        string field;
+        vector<string> fields;
+        
+        // Parse all fields
+        while (getline(rss, field, ',')) {
+            fields.push_back(field);
+        }
+        
+        // Check if we have at least 2 columns
+        if (fields.size() >= 2) {
+            try {
+                // Score is in column index 1 (second column)
+                double score = stod(fields[1]);
+                if (score == targetScore) {
+                    // Print the first field (name)
+                    cout << fields[0] << endl;
+                }
+            } catch (...) {
+                // Not a number, skip
+            }
+        }
+    }
+
+    return 0;
+}
+`,
+  },
 ];

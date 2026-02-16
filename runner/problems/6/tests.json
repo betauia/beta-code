@@ -2,36 +2,46 @@
   {
     "name": "sample1",
     "input": "score\n",
-    "expected": "88.50",
+    "expected": "75.34",
     "hidden": false,
-    "files": ["data.csv"]
+    "files": [
+      "data.csv"
+    ]
   },
   {
     "name": "sample2",
     "input": "name\n",
     "expected": "NOT_FOUND",
     "hidden": false,
-    "files": ["data.csv"]
+    "files": [
+      "data.csv"
+    ]
   },
   {
     "name": "sample3",
     "input": "price\n",
-    "expected": "12.33",
+    "expected": "24.91",
     "hidden": false,
-    "files": ["data.csv"]
+    "files": [
+      "data.csv"
+    ]
   },
   {
     "name": "hidden1",
     "input": "value\n",
-    "expected": "5.50",
+    "expected": "5.14",
     "hidden": true,
-    "files": ["data.csv"]
+    "files": [
+      "data.csv"
+    ]
   },
   {
     "name": "hidden2",
     "input": "temp\n",
-    "expected": "20.10",
+    "expected": "19.17",
     "hidden": true,
-    "files": ["data.csv"]
+    "files": [
+      "data.csv"
+    ]
   }
 ]
