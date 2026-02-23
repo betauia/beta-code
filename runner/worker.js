@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
@@ -42,6 +42,32 @@ async function getTestsFromAPI(taskId) {
   }));
 }
 
+function sanitizeTestName(name) {
+  return String(name ?? "test")
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "test";
+}
+
+function prepareTests(rawTests) {
+  const used = new Set();
+  return rawTests.map((test, index) => {
+    const base = sanitizeTestName(test.name || `test-${index + 1}`);
+    let safeName = base;
+    let suffix = 2;
+    while (used.has(safeName)) {
+      safeName = `${base}_${suffix++}`;
+    }
+    used.add(safeName);
+
+    return {
+      ...test,
+      safeName,
+      originalName: test.name,
+    };
+  });
+}
+
 function norm(s) {
   return String(s ?? "").replace(/\r\n/g, "\n").trimEnd();
 }
@@ -74,8 +100,8 @@ new Worker(
     const { problemId, code } = job.data ?? {};
     if (!problemId || !code) throw new Error("Missing problemId/code");
 
-    // Fetch tests from the frontend API (backed by the database)
-    const tests = await getTestsFromAPI(Number(problemId));
+    // Fetch tests from the frontend API (backed by repo file stores)
+    const tests = prepareTests(await getTestsFromAPI(Number(problemId)));
     if (tests.length === 0) {
       return { verdict: "No Tests", error: "No tests have been added to this task yet." };
     }
@@ -91,16 +117,16 @@ new Worker(
       ];
       for (const t of tests) {
         writeOps.push(
-          writeFile(join(jobDir, "tests", `${t.name}.in`), t.input ?? "", "utf8")
+           writeFile(join(jobDir, "tests", `${t.safeName}.in`), t.input ?? "", "utf8")
         );
  
-        // Write optional data file stored inline in the DB
+        // Write optional data file stored inline in the tests file store
         if (t.data_file_name && t.data_file_content) {
-          const testDataDir = join(jobDir, "testdata", t.name);
+          const testDataDir = join(jobDir, "testdata", t.safeName);
           writeOps.push(
             mkdir(testDataDir, { recursive: true }).then(() =>
               writeFile(
-                join(testDataDir, t.data_file_name),
+                join(testDataDir, basename(t.data_file_name)),
                 t.data_file_content,
                 "utf8"
               )
@@ -125,10 +151,10 @@ new Worker(
 
       const execFail = (results.tests || []).find((t) => t.status && t.status !== "OK");
       if (execFail) {
-        const def = tests.find((t) => t.name === execFail.name);
+        const def = tests.find((t) => t.safeName === execFail.name || t.originalName === execFail.name);
         return {
           verdict: execFail.status === "TLE" ? "Time Limit Exceeded" : "Runtime Error",
-          failedTest: def?.hidden ? "hidden" : execFail.name,
+          failedTest: def?.hidden ? "hidden" : (def?.originalName ?? execFail.name),
           error: def?.hidden ? undefined : runErr,
           input: def?.hidden ? undefined : def?.input,
         };
@@ -138,12 +164,12 @@ new Worker(
       let allAccepted = true;
 
       for (const t of tests) {
-        const got = await readFile(join(jobDir, "outs", `${t.name}.out`), "utf8").catch(() => "");
+         const got = await readFile(join(jobDir, "outs", `${t.safeName}.out`), "utf8").catch(() => "");
         const ok = norm(got) === norm(t.expected);
         if (!ok) allAccepted = false;
 
         perTest.push({
-          name: t.hidden ? "hidden" : t.name,
+          name: t.hidden ? "hidden" : (t.originalName ?? t.safeName),
           status: ok ? "OK" : "WA",
           output: t.hidden ? undefined : got,
           expected: t.hidden ? undefined : t.expected,

@@ -5,6 +5,7 @@ import {
   initTasksTable,
   getTestsForTask,
   createTest,
+  updateTest,
   deleteTest,
 } from "../../../lib/tasks";
 
@@ -78,6 +79,42 @@ export async function DELETE({ request }: { request: Request }) {
 
   const deleted = await deleteTest(id);
   return new Response(JSON.stringify({ success: deleted }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// PUT /api/admin/tests — update a test by id
+export async function PUT({ request }: { request: Request }) {
+  const user = await requireAdmin(request);
+  if (!user) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+
+  await initTasksTable();
+
+  const body = await request.json().catch(() => ({}));
+  const id = Number(body?.id);
+  if (!id) return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
+
+  const name = String(body?.name ?? "").trim();
+  const input = String(body?.input ?? "");
+  const expected_output = String(body?.expected_output ?? "");
+  const is_hidden = Boolean(body?.is_hidden);
+  const data_file_name = body?.data_file_name ? String(body.data_file_name).trim() : null;
+  const data_file_content = body?.data_file_content ? String(body.data_file_content) : null;
+
+  if (!name) return new Response(JSON.stringify({ error: "Test name is required" }), { status: 400 });
+
+  const test = await updateTest(id, {
+    name,
+    input,
+    expected_output,
+    is_hidden,
+    data_file_name,
+    data_file_content,
+  });
+
+  if (!test) return new Response(JSON.stringify({ error: "Test not found" }), { status: 404 });
+
+  return new Response(JSON.stringify(test), {
     headers: { "Content-Type": "application/json" },
   });
 }

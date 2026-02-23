@@ -4,11 +4,13 @@ export const prerender = false;
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Sidebar from "../components/Sidebar.astro";
-import { problems } from "../data/problems";
+import { initTasksTable, getAllTasks } from "../lib/tasks";
 import { getCurrentUser } from "../lib/session";
 
 const { activeId } = Astro.props as { activeId?: string };
 const user = await getCurrentUser(Astro.request);
+await initTasksTable();
+const tasks = await getAllTasks();
 
 ---
 
@@ -25,7 +27,7 @@ const user = await getCurrentUser(Astro.request);
   <body>
     <Header user={user} />
     <div class="shell">
-      <Sidebar problems={problems} activeId={activeId} />
+      <Sidebar problems={tasks.map((t) => ({ id: String(t.id), title: t.name, points: t.points }))} activeId={activeId} />
       <main class="content">
         <slot />
       </main>
