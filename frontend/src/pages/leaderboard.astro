@@ -2,9 +2,9 @@
 export const prerender = false;
 
 import "../styles/global.css";
-import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
+import { initTasksTable, getAllTasks } from "../lib/tasks";
 import Header from "../components/Header.astro";
 
 const user = await getCurrentUser(Astro.request);
@@ -16,7 +16,15 @@ try {
   console.warn("Failed to load users for leaderboard", error);
   users = [];
 }
-const pointsById = new Map(problems.map((problem) => [problem.id, problem.points]));
+
+let dbTasks = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks for leaderboard", error);
+}
+const pointsById = new Map(dbTasks.map((t: any) => [String(t.id), t.points]));
 
 const leaderboard = users
 .filter((entry) => !entry.is_admin)

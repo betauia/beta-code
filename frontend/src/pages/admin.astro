@@ -1,29 +1,37 @@
 ---
 export const prerender = false;
- 
+
 import "../styles/global.css";
-import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
+import { initTasksTable, getAllTasks, type Task } from "../lib/tasks";
 import Header from "../components/Header.astro";
- 
+
 const user = await getCurrentUser(Astro.request);
- 
+
 // Redirect non-admin users
 if (!user || !user.is_admin) {
   return Astro.redirect("/");
 }
- 
+
 let users: User[] = [];
 try {
   users = await getAllUsers();
 } catch (error) {
   console.warn("Failed to load users", error);
 }
- 
-const pointsById = new Map(problems.map((p) => [p.id, p.points]));
+
+let dbTasks: Task[] = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks", error);
+}
+
+const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
 ---
- 
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -36,109 +44,270 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
   </head>
   <body>
     <Header user={user} />
- 
+
     <main class="admin-page">
       <div class="admin-intro">
         <h1>Admin Panel</h1>
-        <p class="p-text">Manage players, remove users, and edit completed tasks.</p>
+        <p class="p-text">Manage players, tasks, and tests.</p>
       </div>
- 
+
       <div id="status-message" class="status-message" style="display: none;"></div>
- 
-      {users.length === 0 ? (
-        <div class="admin-empty">
-          <p>No users found</p>
-        </div>
-      ) : (
-        <div class="admin-card">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Points</th>
-                <th>Completed Tasks</th>
-                <th>Admin</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((entry) => {
-                const completed = entry.completed_tasks || [];
-                const totalPoints = completed.reduce((sum, taskId) => sum + (pointsById.get(taskId) ?? 0), 0);
-                return (
-                  <tr data-user-id={entry.id} data-username={entry.username}>
-                    <td>{entry.id}</td>
-                    <td>
-                      {entry.username}
-                      {entry.id === user.id && <span class="you-badge">(you)</span>}
-                    </td>
-                    <td class="points-cell">{totalPoints}</td>
-                    <td class="tasks-cell">
-                      <div class="task-tags">
-                        {completed.length === 0 ? (
-                          <span class="no-tasks">None</span>
-                        ) : (
-                          completed.map((taskId) => {
-                            const problem = problems.find(p => p.id === taskId);
-                            return (
-                              <span class="task-tag" data-task-id={taskId}>
-                                {problem ? problem.title : `#${taskId}`}
-                                <button
-                                  class="remove-task-btn"
-                                  data-user-id={entry.id}
-                                  data-problem-id={taskId}
-                                  title="Remove this task"
-                                >&times;</button>
-                              </span>
-                            );
-                          })
+
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="users">Users</button>
+        <button class="tab-btn" data-tab="tasks">Tasks</button>
+        <button class="tab-btn" data-tab="tests">Tests</button>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="tab-users" class="tab-content active">
+        {users.length === 0 ? (
+          <div class="admin-empty">
+            <p>No users found</p>
+          </div>
+        ) : (
+          <div class="admin-card">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Points</th>
+                  <th>Completed Tasks</th>
+                  <th>Admin</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((entry) => {
+                  const completed = entry.completed_tasks || [];
+                  const totalPoints = completed.reduce((sum, taskId) => sum + (pointsById.get(taskId) ?? 0), 0);
+                  return (
+                    <tr data-user-id={entry.id} data-username={entry.username}>
+                      <td>{entry.id}</td>
+                      <td>
+                        {entry.username}
+                        {entry.id === user.id && <span class="you-badge">(you)</span>}
+                      </td>
+                      <td class="points-cell">{totalPoints}</td>
+                      <td class="tasks-cell">
+                        <div class="task-tags">
+                          {completed.length === 0 ? (
+                            <span class="no-tasks">None</span>
+                          ) : (
+                            completed.map((taskId) => {
+                              const task = dbTasks.find(t => String(t.id) === taskId);
+                              return (
+                                <span class="task-tag" data-task-id={taskId}>
+                                  {task ? task.name : `#${taskId}`}
+                                  <button
+                                    class="remove-task-btn"
+                                    data-user-id={entry.id}
+                                    data-problem-id={taskId}
+                                    title="Remove this task"
+                                  >&times;</button>
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div class="add-task-row">
+                          <select class="add-task-select" data-user-id={entry.id}>
+                            <option value="">Add task...</option>
+                            {dbTasks
+                              .filter(t => !completed.includes(String(t.id)))
+                              .map(t => (
+                                <option value={String(t.id)}>{t.name} ({t.points}pts)</option>
+                              ))
+                            }
+                          </select>
+                        </div>
+                      </td>
+                      <td>{entry.is_admin ? "Yes" : "No"}</td>
+                      <td>
+                        {entry.id !== user.id && (
+                          <button
+                            class="delete-user-btn"
+                            data-user-id={entry.id}
+                            data-username={entry.username}
+                          >
+                            Delete
+                          </button>
                         )}
-                      </div>
-                      <div class="add-task-row">
-                        <select class="add-task-select" data-user-id={entry.id}>
-                          <option value="">Add task...</option>
-                          {problems
-                            .filter(p => !completed.includes(p.id))
-                            .map(p => (
-                              <option value={p.id}>{p.title} ({p.points}pts)</option>
-                            ))
-                          }
-                        </select>
-                      </div>
-                    </td>
-                    <td>{entry.is_admin ? "Yes" : "No"}</td>
-                    <td>
-                      {entry.id !== user.id && (
-                        <button
-                          class="delete-user-btn"
-                          data-user-id={entry.id}
-                          data-username={entry.username}
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <!-- TASKS TAB -->
+      <div id="tab-tasks" class="tab-content">
+        <div class="admin-card">
+          <h2 class="section-title">Create Task</h2>
+          <form id="create-task-form" class="admin-form">
+            <div class="form-row">
+              <label for="task-name">Name</label>
+              <input id="task-name" type="text" placeholder="Task name" required />
+            </div>
+            <div class="form-row">
+              <label for="task-desc">Description</label>
+              <textarea id="task-desc" rows="4" placeholder="Task description / problem statement"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="task-code">Code Preview (starter code)</label>
+              <textarea id="task-code" rows="8" placeholder="#include <iostream>&#10;using namespace std;&#10;&#10;int main() {&#10;    // ...&#10;}"></textarea>
+            </div>
+            <div class="form-row form-row-inline">
+              <div>
+                <label for="task-points">Points</label>
+                <input id="task-points" type="number" value="50" min="1" max="1000" />
+              </div>
+              <div>
+                <label for="task-type">Type</label>
+                <select id="task-type">
+                  <option value="solve">Solve</option>
+                  <option value="fix">Bug Fix</option>
+                </select>
+              </div>
+              <div>
+                <label for="task-difficulty">Difficulty</label>
+                <select id="task-difficulty">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="primary-btn">Create Task</button>
+          </form>
         </div>
-      )}
+
+        <div class="admin-card">
+          <h2 class="section-title">Existing Tasks</h2>
+          <div id="tasks-list">
+            {dbTasks.length === 0 ? (
+              <p class="no-tasks-msg">No tasks yet. Create one above.</p>
+            ) : (
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Difficulty</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tasks-tbody">
+                  {dbTasks.map(t => (
+                    <tr data-task-id={t.id}>
+                      <td>{t.id}</td>
+                      <td>{t.name}</td>
+                      <td><span class={`type-badge ${t.type === 'fix' ? 'fix-badge' : 'solve-badge'}`}>{t.type === 'fix' ? 'Bug Fix' : 'Solve'}</span></td>
+                      <td>{t.difficulty}</td>
+                      <td>{t.points}</td>
+                      <td>
+                        <button class="delete-task-btn" data-task-id={t.id}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <!-- TESTS TAB -->
+      <div id="tab-tests" class="tab-content">
+        <div class="admin-card">
+          <h2 class="section-title">Create Test</h2>
+          <form id="create-test-form" class="admin-form">
+            <div class="form-row">
+              <label for="test-task">Assign to Task</label>
+              <select id="test-task" required>
+                <option value="">Select a task...</option>
+                {dbTasks.map(t => (
+                  <option value={t.id}>#{t.id} — {t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="test-name">Test Name</label>
+              <input id="test-name" type="text" placeholder="e.g. sample1, hidden1" required />
+            </div>
+            <div class="form-row">
+              <label for="test-input">Input (stdin)</label>
+              <textarea id="test-input" rows="4" placeholder="Input fed to the program via stdin"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="test-expected">Expected Output</label>
+              <textarea id="test-expected" rows="4" placeholder="Expected stdout output"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="test-file-name">Data File Name (optional)</label>
+              <input id="test-file-name" type="text" placeholder="e.g. data.json or data.csv" />
+            </div>
+            <div class="form-row">
+              <label for="test-file-content">Data File Content (optional)</label>
+              <textarea id="test-file-content" rows="6" placeholder="Content of the data file (if applicable)"></textarea>
+            </div>
+            <div class="form-row form-row-checkbox">
+              <label>
+                <input id="test-hidden" type="checkbox" />
+                Hidden test (output not shown to users)
+              </label>
+            </div>
+            <button type="submit" class="primary-btn">Add Test</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h2 class="section-title">View Tests for Task</h2>
+          <div class="form-row">
+            <select id="view-tests-task">
+              <option value="">Select a task...</option>
+              {dbTasks.map(t => (
+                <option value={t.id}>#{t.id} — {t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div id="tests-list" style="margin-top: 16px;">
+            <p class="no-tasks-msg">Select a task above to view its tests.</p>
+          </div>
+        </div>
+      </div>
     </main>
- 
-    <script define:vars={{ problemsData: problems }}>
+
+    <script>
       const statusEl = document.getElementById('status-message');
- 
-      function showStatus(msg, isError = false) {
+
+      function showStatus(msg: string, isError = false) {
+        if (!statusEl) return;
         statusEl.textContent = msg;
         statusEl.className = isError ? 'status-message status-error' : 'status-message status-success';
         statusEl.style.display = 'block';
         setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
       }
- 
-      // Logout
+
+      // ---- Tab switching ----
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          const tabEl = document.getElementById('tab-' + (btn as HTMLElement).dataset.tab);
+          if (tabEl) tabEl.classList.add('active');
+        });
+      });
+
+      // ---- Users tab ----
       const logoutBtn = document.getElementById('logoutBtn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -146,14 +315,12 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           window.location.href = '/';
         });
       }
- 
-      // Delete user buttons
+
       document.querySelectorAll('.delete-user-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const userId = btn.getAttribute('data-user-id');
           const username = btn.getAttribute('data-username');
-          if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return;
- 
+          if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
           const res = await fetch('/api/admin/delete-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -168,13 +335,11 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           }
         });
       });
- 
-      // Remove task buttons
+
       document.querySelectorAll('.remove-task-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const userId = btn.getAttribute('data-user-id');
           const problemId = btn.getAttribute('data-problem-id');
- 
           const res = await fetch('/api/admin/user/update-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -189,14 +354,12 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           }
         });
       });
- 
-      // Add task selects
+
       document.querySelectorAll('.add-task-select').forEach(select => {
         select.addEventListener('change', async () => {
           const userId = select.getAttribute('data-user-id');
           const problemId = select.value;
           if (!problemId) return;
- 
           const res = await fetch('/api/admin/user/update-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -211,80 +374,409 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
           }
         });
       });
+
+      // ---- Tasks tab ----
+      const createTaskForm = document.getElementById('create-task-form');
+      createTaskForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('task-name').value.trim();
+        const description = document.getElementById('task-desc').value.trim();
+        const code_preview = document.getElementById('task-code').value;
+        const points = Number(document.getElementById('task-points').value);
+        const type = document.getElementById('task-type').value;
+        const difficulty = document.getElementById('task-difficulty').value;
+
+        const res = await fetch('/api/admin/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, code_preview, points, type, difficulty }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus(`Task "${data.name}" created (ID: ${data.id})`);
+          createTaskForm.reset();
+          // Add to the tasks table
+          addTaskRow(data);
+          // Add to test dropdowns
+          addTaskToDropdowns(data);
+        } else {
+          showStatus(data.error || 'Failed to create task', true);
+        }
+      });
+
+      function addTaskRow(task) {
+        const tbody = document.getElementById('tasks-tbody');
+        if (!tbody) {
+          // Table didn't exist yet (was empty), reload
+          window.location.reload();
+          return;
+        }
+        const typeBadge = task.type === 'fix'
+          ? '<span class="type-badge fix-badge">Bug Fix</span>'
+          : '<span class="type-badge solve-badge">Solve</span>';
+        const tr = document.createElement('tr');
+        tr.dataset.taskId = task.id;
+        tr.innerHTML = `
+          <td>${task.id}</td>
+          <td>${task.name}</td>
+          <td>${typeBadge}</td>
+          <td>${task.difficulty}</td>
+          <td>${task.points}</td>
+          <td><button class="delete-task-btn" data-task-id="${task.id}">Delete</button></td>
+        `;
+        tr.querySelector('.delete-task-btn').addEventListener('click', handleDeleteTask);
+        tbody.appendChild(tr);
+      }
+
+      function addTaskToDropdowns(task) {
+        const option = (id, label) => {
+          const el = document.createElement('option');
+          el.value = id;
+          el.textContent = label;
+          return el;
+        };
+        const label = `#${task.id} — ${task.name}`;
+        document.getElementById('test-task').appendChild(option(task.id, label));
+        document.getElementById('view-tests-task').appendChild(option(task.id, label));
+
+        // Also add to user "add task" dropdowns
+        document.querySelectorAll('.add-task-select').forEach(sel => {
+          sel.appendChild(option(String(task.id), `${task.name} (${task.points}pts)`));
+        });
+      }
+
+      async function handleDeleteTask(e) {
+        const btn = e.currentTarget;
+        const taskId = Number(btn.getAttribute('data-task-id'));
+        if (!confirm(`Delete task #${taskId} and all its tests? This cannot be undone.`)) return;
+        const res = await fetch('/api/admin/tasks', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus(`Task #${taskId} deleted`);
+          btn.closest('tr').remove();
+        } else {
+          showStatus(data.error || 'Failed to delete task', true);
+        }
+      }
+
+      document.querySelectorAll('.delete-task-btn').forEach(btn => {
+        btn.addEventListener('click', handleDeleteTask);
+      });
+
+      // ---- Tests tab ----
+      const createTestForm = document.getElementById('create-test-form');
+      createTestForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const task_id = Number(document.getElementById('test-task').value);
+        const name = document.getElementById('test-name').value.trim();
+        const input = document.getElementById('test-input').value;
+        const expected_output = document.getElementById('test-expected').value;
+        const is_hidden = document.getElementById('test-hidden').checked;
+        const data_file_name = document.getElementById('test-file-name').value.trim() || null;
+        const data_file_content = document.getElementById('test-file-content').value || null;
+
+        if (!task_id) { showStatus('Please select a task', true); return; }
+        if (!name) { showStatus('Test name is required', true); return; }
+
+        const res = await fetch('/api/admin/tests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus(`Test "${name}" added to task #${task_id}`);
+          createTestForm.reset();
+          // Refresh the test list if we're viewing this task
+          const viewSel = document.getElementById('view-tests-task');
+          if (Number(viewSel.value) === task_id) {
+            loadTestsForTask(task_id);
+          }
+        } else {
+          showStatus(data.error || 'Failed to add test', true);
+        }
+      });
+
+      async function loadTestsForTask(taskId) {
+        const container = document.getElementById('tests-list');
+        container.innerHTML = '<p class="no-tasks-msg">Loading...</p>';
+        const res = await fetch(`/api/admin/tests?taskId=${taskId}`);
+        const tests = await res.json();
+        if (!Array.isArray(tests) || tests.length === 0) {
+          container.innerHTML = '<p class="no-tasks-msg">No tests for this task yet.</p>';
+          return;
+        }
+        container.innerHTML = `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Hidden</th>
+                <th>Input</th>
+                <th>Expected Output</th>
+                <th>Data File</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tests.map(t => `
+                <tr>
+                  <td>${t.id}</td>
+                  <td>${t.name}</td>
+                  <td>${t.is_hidden ? 'Yes' : 'No'}</td>
+                  <td><pre class="test-preview">${escHtml(t.input)}</pre></td>
+                  <td><pre class="test-preview">${escHtml(t.expected_output)}</pre></td>
+                  <td>${t.data_file_name ? escHtml(t.data_file_name) : '—'}</td>
+                  <td><button class="delete-task-btn delete-test-btn" data-test-id="${t.id}">Delete</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        container.querySelectorAll('.delete-test-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const testId = Number(btn.getAttribute('data-test-id'));
+            if (!confirm(`Delete test #${testId}?`)) return;
+            const res = await fetch('/api/admin/tests', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: testId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              showStatus(`Test #${testId} deleted`);
+              btn.closest('tr').remove();
+            } else {
+              showStatus(data.error || 'Failed to delete test', true);
+            }
+          });
+        });
+      }
+
+      document.getElementById('view-tests-task').addEventListener('change', (e) => {
+        const taskId = Number(e.target.value);
+        if (!taskId) {
+          document.getElementById('tests-list').innerHTML = '<p class="no-tasks-msg">Select a task above to view its tests.</p>';
+          return;
+        }
+        loadTestsForTask(taskId);
+      });
+
+      function escHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
     </script>
- 
+
     <style>
-      .user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
- 
-      .username {
-        color: var(--beta-blue);
-        font-weight: 600;
-      }
- 
-      .logout-btn {
-        padding: 6px 12px;
-        background: transparent;
-        border: 1px solid var(--small-text);
-        border-radius: 6px;
-        color: var(--small-text);
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
- 
-      .logout-btn:hover {
-        border-color: var(--beta-blue);
-        color: var(--beta-blue);
-      }
- 
       .admin-page {
         max-width: 1100px;
         margin: 0 auto;
         padding: 32px 16px 64px;
         text-align: left;
       }
- 
+
       .admin-intro h1 {
         margin-bottom: 8px;
       }
- 
+
       .status-message {
         padding: 12px 16px;
         border-radius: 8px;
         margin-bottom: 16px;
         font-weight: 600;
       }
- 
+
       .status-success {
         background: rgba(80, 255, 120, 0.1);
         border: 1px solid rgba(80, 255, 120, 0.4);
         color: #6bff6b;
       }
- 
+
       .status-error {
         background: rgba(255, 80, 80, 0.1);
         border: 1px solid rgba(255, 80, 80, 0.4);
         color: #ff6b6b;
       }
- 
+
+      /* Tab navigation */
+      .tab-nav {
+        display: flex;
+        gap: 8px;
+        margin: 24px 0 0;
+        border-bottom: 1px solid #1f2b43;
+        padding-bottom: 0;
+      }
+
+      .tab-btn {
+        padding: 10px 24px;
+        background: transparent;
+        border: 1px solid #1f2b43;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        color: var(--small-text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+      }
+
+      .tab-btn:hover {
+        color: var(--text-color);
+        background: rgba(255,255,255,0.03);
+      }
+
+      .tab-btn.active {
+        color: var(--beta-blue);
+        border-color: #1f2b43;
+        background: #111b2b;
+        border-bottom: 1px solid #111b2b;
+        margin-bottom: -1px;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
       .admin-card {
         background: #111b2b;
-        border-radius: 16px;
+        border-radius: 0 16px 16px 16px;
         padding: 24px;
-        margin-top: 24px;
+        margin-top: 0;
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
         overflow-x: auto;
+        margin-bottom: 24px;
       }
- 
+
+      #tab-users .admin-card {
+        border-radius: 16px;
+        margin-top: 16px;
+      }
+
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 20px;
+        color: var(--text-color);
+      }
+
+      /* Admin form */
+      .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .form-row label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--small-text);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .form-row input,
+      .form-row textarea,
+      .form-row select {
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        color: var(--text-color);
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .form-row textarea {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.82rem;
+        resize: vertical;
+      }
+
+      .form-row input:focus,
+      .form-row textarea:focus,
+      .form-row select:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+
+      .form-row-inline {
+        flex-direction: row;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .form-row-inline > div {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .form-row-checkbox {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .form-row-checkbox label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .primary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: var(--beta-blue, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: opacity 0.2s;
+      }
+
+      .primary-btn:hover {
+        opacity: 0.85;
+      }
+
+      .no-tasks-msg {
+        color: var(--small-text);
+        font-size: 0.9rem;
+        margin: 0;
+      }
+
+      /* Table */
       .admin-table {
         width: 100%;
         border-collapse: collapse;
       }
- 
+
       .admin-table th,
       .admin-table td {
         text-align: left;
@@ -292,7 +784,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         border-bottom: 1px solid #1f2b43;
         vertical-align: top;
       }
- 
+
       .admin-table th {
         color: var(--small-text);
         font-weight: 600;
@@ -300,19 +792,19 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
- 
+
       .you-badge {
         color: var(--beta-blue);
         font-size: 0.8rem;
         margin-left: 6px;
       }
- 
+
       .task-tags {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
       }
- 
+
       .task-tag {
         display: inline-flex;
         align-items: center;
@@ -324,7 +816,7 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         font-size: 0.85rem;
         color: var(--text-color);
       }
- 
+
       .remove-task-btn {
         background: none;
         border: none;
@@ -334,20 +826,16 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         padding: 0 2px;
         line-height: 1;
       }
- 
-      .remove-task-btn:hover {
-        color: #ff3333;
-      }
- 
+
+      .remove-task-btn:hover { color: #ff3333; }
+
       .no-tasks {
         color: var(--small-text);
         font-size: 0.85rem;
       }
- 
-      .add-task-row {
-        margin-top: 6px;
-      }
- 
+
+      .add-task-row { margin-top: 6px; }
+
       .add-task-select {
         background: #0c1420;
         border: 1px solid #2d3f5f;
@@ -357,13 +845,14 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         font-size: 0.85rem;
         cursor: pointer;
       }
- 
+
       .add-task-select:focus {
         outline: none;
         border-color: var(--beta-blue);
       }
- 
-      .delete-user-btn {
+
+      .delete-user-btn,
+      .delete-task-btn {
         padding: 6px 12px;
         background: transparent;
         border: 1px solid #ff6b6b;
@@ -374,11 +863,43 @@ const pointsById = new Map(problems.map((p) => [p.id, p.points]));
         transition: all 0.2s;
         font-size: 0.85rem;
       }
- 
-      .delete-user-btn:hover {
+
+      .delete-user-btn:hover,
+      .delete-task-btn:hover {
         background: rgba(255, 80, 80, 0.15);
       }
- 
+
+      .type-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .solve-badge {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+
+      .fix-badge {
+        background: rgba(230, 126, 34, 0.15);
+        color: #e67e22;
+        border: 1px solid rgba(230, 126, 34, 0.3);
+      }
+
+      .test-preview {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.78rem;
+        margin: 0;
+        white-space: pre-wrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #aaa;
+      }
+
       .admin-empty {
         margin-top: 24px;
         padding: 20px 24px;

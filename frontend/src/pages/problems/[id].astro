@@ -1,12 +1,15 @@
 ---
+export const prerender = false;
+
 import ProblemLayout from "../../layout/ProblemLayout.astro";
-import { getStarterCode, getProblem } from "../../data/problems";
+import { initTasksTable, getTaskById } from "../../lib/tasks";
 
 const { id } = Astro.params;
 if (!id) throw new Error("Missing problem id in route params");
 
-const problem = getProblem(id);
-const starterCode = getStarterCode(id);
+await initTasksTable();
+const problem = await getTaskById(Number(id));
+const starterCode = problem?.code_preview ?? "";
 ---
 
 <ProblemLayout>
@@ -22,7 +25,7 @@ const starterCode = getStarterCode(id);
     )}
 
     <div class="problem-description">
-      <p>{problem?.description}</p>
+      <p>{problem?.description ?? "Problem not found."}</p>
     </div>
 
     <div class="code-box">
@@ -42,17 +45,6 @@ const starterCode = getStarterCode(id);
     </div>
 
     <div class="actions">
-      <!-- Download data file if there is one to the task -->
-      {problem?.dataFile && (
-        <a
-          href={`/api/problems/data?problemId=${id}`}
-          class="download-btn"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download {problem.dataFile}
-        </a>
-      )}
-
       <!-- Button to run the code -->
       <button id="runBtn" type="button">Run</button>
     </div>
@@ -363,23 +355,7 @@ const starterCode = getStarterCode(id);
   /* Actions */
   .actions {
     display: flex;
-        align-items: center;
-  }
- 
-  .download-btn {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ccc;
-    background: #2d2d2d;
-    border: 1px solid #4a4a4a;
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
   }
  
   .download-btn:hover {
