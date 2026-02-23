@@ -1,4 +1,7 @@
-import { getPool } from "./db";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { problems } from "../data/problems";
 
 export interface Task {
   id: number;
@@ -23,80 +26,164 @@ export interface TaskTest {
   created_at: Date;
 }
 
+type SerializedTask = Omit<Task, "created_at"> & { created_at: string };
+type SerializedTaskTest = Omit<TaskTest, "created_at"> & { created_at: string };
+
+interface LegacyRunnerTest {
+  name?: string;
+  input?: string;
+  expected?: string;
+  hidden?: boolean;
+  files?: string[];
+}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const tasksStorePath = path.resolve(__dirname, "../data/tasks-store.json");
+const testsStorePath = path.resolve(__dirname, "../data/tests-store.json");
+const runnerProblemsPath = path.resolve(__dirname, "../../../runner/problems");
+
+function fromSerializedTask(task: SerializedTask): Task {
+  return { ...task, created_at: new Date(task.created_at) };
+}
+
+function fromSerializedTest(test: SerializedTaskTest): TaskTest {
+  return { ...test, created_at: new Date(test.created_at) };
+}
+
+function toSerializedTask(task: Task): SerializedTask {
+  return { ...task, created_at: task.created_at.toISOString() };
+}
+
+function toSerializedTest(test: TaskTest): SerializedTaskTest {
+  return { ...test, created_at: test.created_at.toISOString() };
+}
+
+function toDefaultTasks(): SerializedTask[] {
+  const now = new Date().toISOString();
+  return problems.map((p) => ({
+    id: Number(p.id),
+    name: p.title,
+    description: p.description,
+    code_preview: p.starterCode,
+    points: p.points,
+    type: p.type,
+    difficulty: p.difficulty,
+    created_at: now,
+  }));
+}
+
+async function buildDefaultTestsFromRunner(): Promise<SerializedTaskTest[]> {
+  try {
+    const entries = await readdir(runnerProblemsPath, { withFileTypes: true });
+    const taskDirs = entries
+      .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
+      .sort((a, b) => Number(a.name) - Number(b.name));
+
+    const now = new Date().toISOString();
+    const tests: SerializedTaskTest[] = [];
+    let nextId = 1;
+
+    for (const taskDir of taskDirs) {
+      const taskId = Number(taskDir.name);
+      const testsPath = path.join(runnerProblemsPath, taskDir.name, "tests.json");
+      const raw = await readFile(testsPath, "utf8").catch(() => "[]");
+      const parsed = JSON.parse(raw) as LegacyRunnerTest[];
+      if (!Array.isArray(parsed)) continue;
+
+      for (const item of parsed) {
+        const fileName = Array.isArray(item.files) && item.files.length > 0 ? String(item.files[0]) : null;
+        let fileContent: string | null = null;
+
+        if (fileName) {
+          const filePath = path.join(runnerProblemsPath, taskDir.name, String(item.name ?? ""), fileName);
+          fileContent = await readFile(filePath, "utf8").catch(() => null);
+        }
+
+        tests.push({
+          id: nextId++,
+          task_id: taskId,
+          name: String(item.name ?? `test-${nextId}`),
+          input: String(item.input ?? ""),
+          expected_output: String(item.expected ?? ""),
+          is_hidden: Boolean(item.hidden),
+          data_file_name: fileName,
+          data_file_content: fileContent,
+          created_at: now,
+        });
+      }
+    }
+
+    return tests;
+  } catch {
+    return [];
+  }
+}
+
+async function readTasksStore(): Promise<SerializedTask[]> {
+  const raw = await readFile(tasksStorePath, "utf8");
+  const parsed = JSON.parse(raw) as { tasks?: SerializedTask[] } | SerializedTask[];
+  if (Array.isArray(parsed)) return parsed;
+  return Array.isArray(parsed.tasks) ? parsed.tasks : [];
+}
+
+async function readTestsStore(): Promise<SerializedTaskTest[]> {
+  const raw = await readFile(testsStorePath, "utf8");
+  const parsed = JSON.parse(raw) as { tests?: SerializedTaskTest[] } | SerializedTaskTest[];
+  if (Array.isArray(parsed)) return parsed;
+  return Array.isArray(parsed.tests) ? parsed.tests : [];
+}
+
+async function writeTasksStore(tasks: SerializedTask[]) {
+  await writeFile(tasksStorePath, JSON.stringify({ tasks }, null, 2) + "\n", "utf8");
+}
+
+async function writeTestsStore(tests: SerializedTaskTest[]) {
+  await writeFile(testsStorePath, JSON.stringify({ tests }, null, 2) + "\n", "utf8");
+}
+
+async function readLegacyTestsFromTasksStore(): Promise<SerializedTaskTest[]> {
+  const raw = await readFile(tasksStorePath, "utf8").catch(() => "{}");
+  const parsed = JSON.parse(raw) as { tests?: SerializedTaskTest[] };
+  return Array.isArray(parsed.tests) ? parsed.tests : [];
+}
+
 export async function initTasksTable() {
-  const pool = await getPool() as any;
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      code_preview TEXT NOT NULL DEFAULT '',
-      points INTEGER NOT NULL DEFAULT 50,
-      type VARCHAR(10) NOT NULL DEFAULT 'solve' CHECK (type IN ('solve', 'fix')),
-      difficulty VARCHAR(10) NOT NULL DEFAULT 'Easy',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS task_tests (
-      id SERIAL PRIMARY KEY,
-      task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-      name VARCHAR(100) NOT NULL,
-      input TEXT NOT NULL DEFAULT '',
-      expected_output TEXT NOT NULL DEFAULT '',
-      is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
-      data_file_name VARCHAR(255),
-      data_file_content TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-}
+  await mkdir(path.dirname(tasksStorePath), { recursive: true });
 
-function rowToTask(row: any): Task {
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    code_preview: row.code_preview,
-    points: row.points,
-    type: row.type,
-    difficulty: row.difficulty,
-    created_at: row.created_at,
-  };
-}
+  try {
+    await access(tasksStorePath);
+  } catch {
+    await writeTasksStore(toDefaultTasks());
+  }
 
-function rowToTest(row: any): TaskTest {
-  return {
-    id: row.id,
-    task_id: row.task_id,
-    name: row.name,
-    input: row.input,
-    expected_output: row.expected_output,
-    is_hidden: row.is_hidden,
-    data_file_name: row.data_file_name,
-    data_file_content: row.data_file_content,
-    created_at: row.created_at,
-  };
+  try {
+    await access(testsStorePath);
+  } catch {
+    const legacyTests = await readLegacyTestsFromTasksStore();
+    await writeTestsStore(legacyTests.length > 0 ? legacyTests : await buildDefaultTestsFromRunner());
+  }
+
+  const tasks = await readTasksStore();
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    await writeTasksStore(toDefaultTasks());
+  }
+
+  const tests = await readTestsStore();
+  if (!Array.isArray(tests) || tests.length === 0) {
+    const legacyTests = await readLegacyTestsFromTasksStore();
+    await writeTestsStore(legacyTests.length > 0 ? legacyTests : await buildDefaultTestsFromRunner());
+  }
 }
 
 export async function getAllTasks(): Promise<Task[]> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `SELECT id, name, description, code_preview, points, type, difficulty, created_at
-     FROM tasks ORDER BY id ASC`
-  );
-  return result.rows.map(rowToTask);
+  const tasks = await readTasksStore();
+  return tasks.map(fromSerializedTask).sort((a, b) => a.id - b.id);
 }
 
 export async function getTaskById(id: number): Promise<Task | null> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `SELECT id, name, description, code_preview, points, type, difficulty, created_at
-     FROM tasks WHERE id = $1`,
-    [id]
-  );
-  if (result.rows.length === 0) return null;
-  return rowToTask(result.rows[0]);
+  const tasks = await readTasksStore();
+  const found = tasks.find((task) => task.id === id);
+  return found ? fromSerializedTask(found) : null;
 }
 
 export async function createTask(data: {
@@ -107,30 +194,63 @@ export async function createTask(data: {
   type: "solve" | "fix";
   difficulty: string;
 }): Promise<Task> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `INSERT INTO tasks (name, description, code_preview, points, type, difficulty)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, description, code_preview, points, type, difficulty, created_at`,
-    [data.name, data.description, data.code_preview, data.points, data.type, data.difficulty]
-  );
-  return rowToTask(result.rows[0]);
+  const tasks = await readTasksStore();
+  const nextId = tasks.reduce((max, task) => Math.max(max, task.id), 0) + 1;
+  const task: Task = {
+    id: nextId,
+    name: data.name,
+    description: data.description,
+    code_preview: data.code_preview,
+    points: data.points,
+    type: data.type,
+    difficulty: data.difficulty,
+    created_at: new Date(),
+  };
+
+  tasks.push(toSerializedTask(task));
+  await writeTasksStore(tasks);
+  return task;
+}
+
+export async function updateTask(
+  id: number,
+  data: Partial<Pick<Task, "name" | "description" | "code_preview" | "points" | "type" | "difficulty">>
+): Promise<Task | null> {
+  const tasks = await readTasksStore();
+  const task = tasks.find((entry) => entry.id === id);
+  if (!task) return null;
+
+  if (data.name !== undefined) task.name = data.name;
+  if (data.description !== undefined) task.description = data.description;
+  if (data.code_preview !== undefined) task.code_preview = data.code_preview;
+  if (data.points !== undefined) task.points = data.points;
+  if (data.type !== undefined) task.type = data.type;
+  if (data.difficulty !== undefined) task.difficulty = data.difficulty;
+
+  await writeTasksStore(tasks);
+  return fromSerializedTask(task);
 }
 
 export async function deleteTask(id: number): Promise<boolean> {
-  const pool = await getPool() as any;
-  const result = await pool.query(`DELETE FROM tasks WHERE id = $1`, [id]);
-  return result.rowCount !== null && result.rowCount > 0;
+  const tasks = await readTasksStore();
+  const initialTasks = tasks.length;
+  const filteredTasks = tasks.filter((task) => task.id !== id);
+  if (filteredTasks.length === initialTasks) return false;
+
+  const tests = await readTestsStore();
+  const filteredTests = tests.filter((test) => test.task_id !== id);
+
+  await writeTasksStore(filteredTasks);
+  await writeTestsStore(filteredTests);
+  return true;
 }
 
 export async function getTestsForTask(taskId: number): Promise<TaskTest[]> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `SELECT id, task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content, created_at
-     FROM task_tests WHERE task_id = $1 ORDER BY id ASC`,
-    [taskId]
-  );
-  return result.rows.map(rowToTest);
+  const tests = await readTestsStore();
+  return tests
+    .filter((test) => test.task_id === taskId)
+    .map(fromSerializedTest)
+    .sort((a, b) => a.id - b.id);
 }
 
 export async function createTest(data: {
@@ -142,26 +262,51 @@ export async function createTest(data: {
   data_file_name?: string | null;
   data_file_content?: string | null;
 }): Promise<TaskTest> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `INSERT INTO task_tests (task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content, created_at`,
-    [
-      data.task_id,
-      data.name,
-      data.input,
-      data.expected_output,
-      data.is_hidden,
-      data.data_file_name ?? null,
-      data.data_file_content ?? null,
-    ]
-  );
-  return rowToTest(result.rows[0]);
+  const tests = await readTestsStore();
+  const nextId = tests.reduce((max, test) => Math.max(max, test.id), 0) + 1;
+
+  const test: TaskTest = {
+    id: nextId,
+    task_id: data.task_id,
+    name: data.name,
+    input: data.input,
+    expected_output: data.expected_output,
+    is_hidden: data.is_hidden,
+    data_file_name: data.data_file_name ?? null,
+    data_file_content: data.data_file_content ?? null,
+    created_at: new Date(),
+  };
+
+  tests.push(toSerializedTest(test));
+  await writeTestsStore(tests);
+  return test;
+}
+
+export async function updateTest(
+  id: number,
+  data: Partial<Pick<TaskTest, "name" | "input" | "expected_output" | "is_hidden" | "data_file_name" | "data_file_content">>
+): Promise<TaskTest | null> {
+  const tests = await readTestsStore();
+  const test = tests.find((entry) => entry.id === id);
+  if (!test) return null;
+
+  if (data.name !== undefined) test.name = data.name;
+  if (data.input !== undefined) test.input = data.input;
+  if (data.expected_output !== undefined) test.expected_output = data.expected_output;
+  if (data.is_hidden !== undefined) test.is_hidden = data.is_hidden;
+  if (data.data_file_name !== undefined) test.data_file_name = data.data_file_name;
+  if (data.data_file_content !== undefined) test.data_file_content = data.data_file_content;
+
+  await writeTestsStore(tests);
+  return fromSerializedTest(test);
 }
 
 export async function deleteTest(id: number): Promise<boolean> {
-  const pool = await getPool() as any;
-  const result = await pool.query(`DELETE FROM task_tests WHERE id = $1`, [id]);
-  return result.rowCount !== null && result.rowCount > 0;
+  const tests = await readTestsStore();
+  const initialLength = tests.length;
+  const filtered = tests.filter((test) => test.id !== id);
+  if (filtered.length === initialLength) return false;
+
+  await writeTestsStore(filtered);
+  return true;
 }

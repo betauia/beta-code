@@ -12,7 +12,7 @@ const problem = await getTaskById(Number(id));
 const starterCode = problem?.code_preview ?? "";
 ---
 
-<ProblemLayout>
+<ProblemLayout activeId={id}>
   <section class="problem-page" data-problem-id={id}>
     <h1>Problem {id}</h1>
 

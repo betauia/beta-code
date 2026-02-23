@@ -213,6 +213,7 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
                       <td>{t.difficulty}</td>
                       <td>{t.points}</td>
                       <td>
+                        <button class="edit-task-btn" data-task-id={t.id}>Edit</button>
                         <button class="delete-task-btn" data-task-id={t.id}>Delete</button>
                       </td>
                     </tr>
@@ -429,9 +430,10 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
           <td>${typeBadge}</td>
           <td>${escHtml(task.difficulty)}</td>
           <td>${escHtml(task.points)}</td>
-          <td><button class="delete-task-btn" data-task-id="${escHtml(task.id)}">Delete</button></td>
+          <td><button class="edit-task-btn" data-task-id="${escHtml(task.id)}">Edit</button> <button class="delete-task-btn" data-task-id="${escHtml(task.id)}">Delete</button></td>
         `;
         tr.querySelector('.delete-task-btn')?.addEventListener('click', handleDeleteTask);
+        tr.querySelector('.edit-task-btn')?.addEventListener('click', handleEditTask);
         tbody.appendChild(tr);
       }
 
@@ -449,6 +451,54 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
         document.querySelectorAll('.add-task-select').forEach(sel => {
           sel.appendChild(option(String(task.id), `${task.name} (${task.points}pts)`));
         });
+      }
+
+      async function handleEditTask(e: Event) {
+        const btn = e.currentTarget as HTMLElement;
+        const row = btn.closest('tr') as HTMLElement | null;
+        if (!row) return;
+
+        const taskId = Number(btn.getAttribute('data-task-id'));
+        const allTasksRes = await fetch('/api/admin/tasks');
+        const allTasks = await allTasksRes.json();
+        const existing = Array.isArray(allTasks) ? allTasks.find((t: { id: number }) => t.id === taskId) : null;
+        if (!existing) {
+          showStatus('Task not found', true);
+          return;
+        }
+
+        const name = prompt('Task name', existing.name || '');
+        if (name === null) return;
+        const description = prompt('Task description', existing.description || '');
+        if (description === null) return;
+        const code_preview = prompt('Starter code', existing.code_preview || '');
+        if (code_preview === null) return;
+        const pointsInput = prompt('Points', String(existing.points ?? 50));
+        if (pointsInput === null) return;
+        const points = Number(pointsInput);
+        const typeInput = prompt('Type (solve or fix)', existing.type || 'solve');
+        if (typeInput === null) return;
+        const type = typeInput.trim().toLowerCase() === 'fix' ? 'fix' : 'solve';
+        const difficultyInput = prompt('Difficulty (Easy, Medium, Hard)', existing.difficulty || 'Easy');
+        if (difficultyInput === null) return;
+        const difficulty = ['Easy', 'Medium', 'Hard'].includes(difficultyInput) ? difficultyInput : 'Easy';
+
+        const res = await fetch('/api/admin/tasks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId, name: name.trim(), description, code_preview, points, type, difficulty }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showStatus(data.error || 'Failed to edit task', true);
+          return;
+        }
+
+        showStatus(`Task #${taskId} updated`);
+        row.children[1].textContent = data.name;
+        row.children[2].innerHTML = data.type === 'fix' ? '<span class="type-badge fix-badge">Bug Fix</span>' : '<span class="type-badge solve-badge">Solve</span>';
+        row.children[3].textContent = data.difficulty;
+        row.children[4].textContent = String(data.points);
       }
 
       async function handleDeleteTask(e: Event) {
@@ -471,6 +521,9 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
 
       document.querySelectorAll('.delete-task-btn').forEach(btn => {
         btn.addEventListener('click', handleDeleteTask);
+      });
+      document.querySelectorAll('.edit-task-btn').forEach(btn => {
+        btn.addEventListener('click', handleEditTask);
       });
 
       // ---- Tests tab ----
@@ -531,19 +584,61 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
             </thead>
             <tbody>
               ${tests.map(t => `
-                <tr>
+                <tr data-test-id="${escHtml(t.id)}" data-test-name="${escHtml(t.name)}" data-test-input="${escHtml(t.input)}" data-test-expected="${escHtml(t.expected_output)}" data-test-hidden="${t.is_hidden ? '1' : '0'}" data-test-file-name="${escHtml(t.data_file_name || '')}" data-test-file-content="${escHtml(t.data_file_content || '')}">
                   <td>${escHtml(t.id)}</td>
                   <td>${escHtml(t.name)}</td>
                   <td>${t.is_hidden ? 'Yes' : 'No'}</td>
                   <td><pre class="test-preview">${escHtml(t.input)}</pre></td>
                   <td><pre class="test-preview">${escHtml(t.expected_output)}</pre></td>
                   <td>${t.data_file_name ? escHtml(t.data_file_name) : '—'}</td>
-                  <td><button class="delete-task-btn delete-test-btn" data-test-id="${escHtml(t.id)}">Delete</button></td>
+                  <td><button class="edit-task-btn edit-test-btn" data-test-id="${escHtml(t.id)}">Edit</button> <button class="delete-task-btn delete-test-btn" data-test-id="${escHtml(t.id)}">Delete</button></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         `;
+        container.querySelectorAll('.edit-test-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const testId = Number(btn.getAttribute('data-test-id'));
+            const row = (btn as HTMLElement).closest('tr') as HTMLElement | null;
+            if (!row) return;
+
+            const name = prompt('Test name', row.dataset.testName || '');
+            if (name === null) return;
+            const input = prompt('Input (stdin)', row.dataset.testInput || '');
+            if (input === null) return;
+            const expected_output = prompt('Expected output', row.dataset.testExpected || '');
+            if (expected_output === null) return;
+            const hiddenInput = prompt('Hidden? (yes/no)', row.dataset.testHidden === '1' ? 'yes' : 'no');
+            if (hiddenInput === null) return;
+            const data_file_name = prompt('Data file name (optional)', row.dataset.testFileName || '');
+            if (data_file_name === null) return;
+            const data_file_content = prompt('Data file content (optional)', row.dataset.testFileContent || '');
+            if (data_file_content === null) return;
+
+            const res = await fetch('/api/admin/tests', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: testId,
+                name: name.trim(),
+                input,
+                expected_output,
+                is_hidden: hiddenInput.trim().toLowerCase().startsWith('y'),
+                data_file_name: data_file_name.trim() || null,
+                data_file_content: data_file_content || null,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              showStatus(data.error || 'Failed to edit test', true);
+              return;
+            }
+            showStatus(`Test #${testId} updated`);
+            loadTestsForTask(taskId);
+          });
+        });
+        
         container.querySelectorAll('.delete-test-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
             const testId = Number(btn.getAttribute('data-test-id'));
