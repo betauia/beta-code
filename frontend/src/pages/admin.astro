@@ -228,7 +228,7 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
       <!-- TESTS TAB -->
       <div id="tab-tests" class="tab-content">
         <div class="admin-card">
-          <h2 class="section-title">Create Test</h2>
+          <h2 id="test-form-title" class="section-title">Create Test</h2>
           <form id="create-test-form" class="admin-form">
             <div class="form-row">
               <label for="test-task">Assign to Task</label>
@@ -265,7 +265,10 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
                 Hidden test (output not shown to users)
               </label>
             </div>
-            <button type="submit" class="primary-btn">Add Test</button>
+            <div class="form-actions-row">
+              <button id="test-submit-btn" type="submit" class="primary-btn">Add Test</button>
+              <button id="test-cancel-edit-btn" type="button" class="secondary-btn" style="display:none;">Cancel Edit</button>
+            </div>
           </form>
         </div>
 
@@ -305,6 +308,16 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#039;');
       }
+
+      function unescHtml(str: unknown): string {
+        return String(str ?? '')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, '&');
+      }
+
 
       // ---- Tab switching ----
       document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -387,6 +400,28 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
       });
 
       // ---- Tasks tab ----
+       let editingTaskId: number | null = null;
+
+      function resetTaskFormMode() {
+        editingTaskId = null;
+        const title = document.getElementById('task-form-title');
+        const submit = document.getElementById('task-submit-btn');
+        const cancel = document.getElementById('task-cancel-edit-btn');
+        if (title) title.textContent = 'Create Task';
+        if (submit) submit.textContent = 'Create Task';
+        if (cancel) (cancel as HTMLElement).style.display = 'none';
+      }
+
+      function setTaskFormModeForEdit(taskId: number) {
+        editingTaskId = taskId;
+        const title = document.getElementById('task-form-title');
+        const submit = document.getElementById('task-submit-btn');
+        const cancel = document.getElementById('task-cancel-edit-btn');
+        if (title) title.textContent = `Edit Task #${taskId}`;
+        if (submit) submit.textContent = 'Update Task';
+        if (cancel) (cancel as HTMLElement).style.display = 'inline-block';
+      }
+
       const createTaskForm = document.getElementById('create-task-form');
       createTaskForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -397,20 +432,39 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
         const type = (document.getElementById('task-type') as HTMLSelectElement)?.value ?? 'solve';
         const difficulty = (document.getElementById('task-difficulty') as HTMLSelectElement)?.value ?? 'Easy';
 
+        const isEditing = editingTaskId !== null;
         const res = await fetch('/api/admin/tasks', {
-          method: 'POST',
+          method: isEditing ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, code_preview, points, type, difficulty }),
+          body: JSON.stringify({ id: editingTaskId, name, description, code_preview, points, type, difficulty }),
         });
         const data = await res.json();
         if (res.ok) {
-          showStatus(`Task "${data.name}" created (ID: ${data.id})`);
+          showStatus(isEditing ? `Task "${data.name}" updated` : `Task "${data.name}" created (ID: ${data.id})`);
           (createTaskForm as HTMLFormElement).reset();
-          addTaskRow(data);
-          addTaskToDropdowns(data);
+          if (isEditing) {
+            const row = document.querySelector(`tr[data-task-id="${data.id}"]`);
+            if (row) {
+              const cells = row.querySelectorAll('td');
+              if (cells[1]) cells[1].textContent = data.name;
+              if (cells[2]) cells[2].innerHTML = data.type === 'fix' ? '<span class="type-badge fix-badge">Bug Fix</span>' : '<span class="type-badge solve-badge">Solve</span>';
+              if (cells[3]) cells[3].textContent = data.difficulty;
+              if (cells[4]) cells[4].textContent = String(data.points);
+            }
+            window.location.reload();
+          } else {
+            addTaskRow(data);
+            addTaskToDropdowns(data);
+          }
+          resetTaskFormMode();
         } else {
           showStatus(data.error || 'Failed to create task', true);
         }
+      });
+
+      document.getElementById('task-cancel-edit-btn')?.addEventListener('click', () => {
+        (createTaskForm as HTMLFormElement | null)?.reset();
+        resetTaskFormMode();
       });
 
       function addTaskRow(task: { id: string | number; name: string; type: string; difficulty: string; points: number }) {
@@ -455,9 +509,6 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
 
       async function handleEditTask(e: Event) {
         const btn = e.currentTarget as HTMLElement;
-        const row = btn.closest('tr') as HTMLElement | null;
-        if (!row) return;
-
         const taskId = Number(btn.getAttribute('data-task-id'));
         const allTasksRes = await fetch('/api/admin/tasks');
         const allTasks = await allTasksRes.json();
@@ -467,38 +518,14 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
           return;
         }
 
-        const name = prompt('Task name', existing.name || '');
-        if (name === null) return;
-        const description = prompt('Task description', existing.description || '');
-        if (description === null) return;
-        const code_preview = prompt('Starter code', existing.code_preview || '');
-        if (code_preview === null) return;
-        const pointsInput = prompt('Points', String(existing.points ?? 50));
-        if (pointsInput === null) return;
-        const points = Number(pointsInput);
-        const typeInput = prompt('Type (solve or fix)', existing.type || 'solve');
-        if (typeInput === null) return;
-        const type = typeInput.trim().toLowerCase() === 'fix' ? 'fix' : 'solve';
-        const difficultyInput = prompt('Difficulty (Easy, Medium, Hard)', existing.difficulty || 'Easy');
-        if (difficultyInput === null) return;
-        const difficulty = ['Easy', 'Medium', 'Hard'].includes(difficultyInput) ? difficultyInput : 'Easy';
-
-        const res = await fetch('/api/admin/tasks', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: taskId, name: name.trim(), description, code_preview, points, type, difficulty }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          showStatus(data.error || 'Failed to edit task', true);
-          return;
-        }
-
-        showStatus(`Task #${taskId} updated`);
-        row.children[1].textContent = data.name;
-        row.children[2].innerHTML = data.type === 'fix' ? '<span class="type-badge fix-badge">Bug Fix</span>' : '<span class="type-badge solve-badge">Solve</span>';
-        row.children[3].textContent = data.difficulty;
-        row.children[4].textContent = String(data.points);
+        (document.getElementById('task-name') as HTMLInputElement).value = existing.name || '';
+        (document.getElementById('task-desc') as HTMLTextAreaElement).value = existing.description || '';
+        (document.getElementById('task-code') as HTMLTextAreaElement).value = existing.code_preview || '';
+        (document.getElementById('task-points') as HTMLInputElement).value = String(existing.points ?? 50);
+        (document.getElementById('task-type') as HTMLSelectElement).value = existing.type === 'fix' ? 'fix' : 'solve';
+        (document.getElementById('task-difficulty') as HTMLSelectElement).value = ['Easy', 'Medium', 'Hard'].includes(existing.difficulty) ? existing.difficulty : 'Easy';
+        setTaskFormModeForEdit(taskId);
+        (createTaskForm as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       async function handleDeleteTask(e: Event) {
@@ -527,6 +554,29 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
       });
 
       // ---- Tests tab ----
+       // ---- Tests tab ----
+      let editingTestId: number | null = null;
+
+      function resetTestFormMode() {
+        editingTestId = null;
+        const title = document.getElementById('test-form-title');
+        const submit = document.getElementById('test-submit-btn');
+        const cancel = document.getElementById('test-cancel-edit-btn');
+        if (title) title.textContent = 'Create Test';
+        if (submit) submit.textContent = 'Add Test';
+        if (cancel) (cancel as HTMLElement).style.display = 'none';
+      }
+
+      function setTestFormModeForEdit(testId: number) {
+        editingTestId = testId;
+        const title = document.getElementById('test-form-title');
+        const submit = document.getElementById('test-submit-btn');
+        const cancel = document.getElementById('test-cancel-edit-btn');
+        if (title) title.textContent = `Edit Test #${testId}`;
+        if (submit) submit.textContent = 'Update Test';
+        if (cancel) (cancel as HTMLElement).style.display = 'inline-block';
+      }
+
       const createTestForm = document.getElementById('create-test-form');
       createTestForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -541,14 +591,15 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
         if (!task_id) { showStatus('Please select a task', true); return; }
         if (!name) { showStatus('Test name is required', true); return; }
 
+        const isEditing = editingTestId !== null;
         const res = await fetch('/api/admin/tests', {
-          method: 'POST',
+          method: isEditing ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content }),
+          body: JSON.stringify({ id: editingTestId, task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content }),
         });
         const data = await res.json();
         if (res.ok) {
-          showStatus(`Test "${name}" added to task #${task_id}`);
+          showStatus(isEditing ? `Test "${name}" updated` : `Test "${name}" added to task #${task_id}`);
           (createTestForm as HTMLFormElement).reset();
           const viewSel = document.getElementById('view-tests-task') as HTMLSelectElement | null;
           if (viewSel && Number(viewSel.value) === task_id) {
@@ -557,6 +608,11 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
         } else {
           showStatus(data.error || 'Failed to add test', true);
         }
+      });
+
+      document.getElementById('test-cancel-edit-btn')?.addEventListener('click', () => {
+        (createTestForm as HTMLFormElement | null)?.reset();
+        resetTestFormMode();
       });
 
       async function loadTestsForTask(taskId: number) {
@@ -603,42 +659,19 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
             const row = (btn as HTMLElement).closest('tr') as HTMLElement | null;
             if (!row) return;
 
-            const name = prompt('Test name', row.dataset.testName || '');
-            if (name === null) return;
-            const input = prompt('Input (stdin)', row.dataset.testInput || '');
-            if (input === null) return;
-            const expected_output = prompt('Expected output', row.dataset.testExpected || '');
-            if (expected_output === null) return;
-            const hiddenInput = prompt('Hidden? (yes/no)', row.dataset.testHidden === '1' ? 'yes' : 'no');
-            if (hiddenInput === null) return;
-            const data_file_name = prompt('Data file name (optional)', row.dataset.testFileName || '');
-            if (data_file_name === null) return;
-            const data_file_content = prompt('Data file content (optional)', row.dataset.testFileContent || '');
-            if (data_file_content === null) return;
+            (document.getElementById('test-task') as HTMLSelectElement).value = String(taskId);
+            (document.getElementById('test-name') as HTMLInputElement).value = unescHtml(row.dataset.testName || '');
+            (document.getElementById('test-input') as HTMLTextAreaElement).value = unescHtml(row.dataset.testInput || '');
+            (document.getElementById('test-expected') as HTMLTextAreaElement).value = unescHtml(row.dataset.testExpected || '');
+            (document.getElementById('test-hidden') as HTMLInputElement).checked = row.dataset.testHidden === '1';
+            (document.getElementById('test-file-name') as HTMLInputElement).value = unescHtml(row.dataset.testFileName || '');
+            (document.getElementById('test-file-content') as HTMLTextAreaElement).value = unescHtml(row.dataset.testFileContent || '');
 
-            const res = await fetch('/api/admin/tests', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: testId,
-                name: name.trim(),
-                input,
-                expected_output,
-                is_hidden: hiddenInput.trim().toLowerCase().startsWith('y'),
-                data_file_name: data_file_name.trim() || null,
-                data_file_content: data_file_content || null,
-              }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              showStatus(data.error || 'Failed to edit test', true);
-              return;
-            }
-            showStatus(`Test #${testId} updated`);
-            loadTestsForTask(taskId);
+            setTestFormModeForEdit(testId);
+            (createTestForm as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           });
         });
-        
+
         container.querySelectorAll('.delete-test-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
             const testId = Number(btn.getAttribute('data-test-id'));
@@ -854,6 +887,24 @@ const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
         cursor: pointer;
         font-size: 0.9rem;
         transition: opacity 0.2s;
+      }
+
+      .secondary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+
+      .form-actions-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
       }
 
       .primary-btn:hover {
