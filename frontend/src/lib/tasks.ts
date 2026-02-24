@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { problems } from "../data/problems";
@@ -29,18 +29,10 @@ export interface TaskTest {
 type SerializedTask = Omit<Task, "created_at"> & { created_at: string };
 type SerializedTaskTest = Omit<TaskTest, "created_at"> & { created_at: string };
 
-interface LegacyRunnerTest {
-  name?: string;
-  input?: string;
-  expected?: string;
-  hidden?: boolean;
-  files?: string[];
-}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const tasksStorePath = path.resolve(__dirname, "../data/tasks-store.json");
 const testsStorePath = path.resolve(__dirname, "../data/tests-store.json");
-const runnerProblemsPath = path.resolve(__dirname, "../../../runner/problems");
 
 function fromSerializedTask(task: SerializedTask): Task {
   return { ...task, created_at: new Date(task.created_at) };
@@ -72,52 +64,6 @@ function toDefaultTasks(): SerializedTask[] {
   }));
 }
 
-async function buildDefaultTestsFromRunner(): Promise<SerializedTaskTest[]> {
-  try {
-    const entries = await readdir(runnerProblemsPath, { withFileTypes: true });
-    const taskDirs = entries
-      .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
-      .sort((a, b) => Number(a.name) - Number(b.name));
-
-    const now = new Date().toISOString();
-    const tests: SerializedTaskTest[] = [];
-    let nextId = 1;
-
-    for (const taskDir of taskDirs) {
-      const taskId = Number(taskDir.name);
-      const testsPath = path.join(runnerProblemsPath, taskDir.name, "tests.json");
-      const raw = await readFile(testsPath, "utf8").catch(() => "[]");
-      const parsed = JSON.parse(raw) as LegacyRunnerTest[];
-      if (!Array.isArray(parsed)) continue;
-
-      for (const item of parsed) {
-        const fileName = Array.isArray(item.files) && item.files.length > 0 ? String(item.files[0]) : null;
-        let fileContent: string | null = null;
-
-        if (fileName) {
-          const filePath = path.join(runnerProblemsPath, taskDir.name, String(item.name ?? ""), fileName);
-          fileContent = await readFile(filePath, "utf8").catch(() => null);
-        }
-
-        tests.push({
-          id: nextId++,
-          task_id: taskId,
-          name: String(item.name ?? `test-${nextId}`),
-          input: String(item.input ?? ""),
-          expected_output: String(item.expected ?? ""),
-          is_hidden: Boolean(item.hidden),
-          data_file_name: fileName,
-          data_file_content: fileContent,
-          created_at: now,
-        });
-      }
-    }
-
-    return tests;
-  } catch {
-    return [];
-  }
-}
 
 async function readTasksStore(): Promise<SerializedTask[]> {
   const raw = await readFile(tasksStorePath, "utf8");
@@ -141,12 +87,6 @@ async function writeTestsStore(tests: SerializedTaskTest[]) {
   await writeFile(testsStorePath, JSON.stringify({ tests }, null, 2) + "\n", "utf8");
 }
 
-async function readLegacyTestsFromTasksStore(): Promise<SerializedTaskTest[]> {
-  const raw = await readFile(tasksStorePath, "utf8").catch(() => "{}");
-  const parsed = JSON.parse(raw) as { tests?: SerializedTaskTest[] };
-  return Array.isArray(parsed.tests) ? parsed.tests : [];
-}
-
 export async function initTasksTable() {
   await mkdir(path.dirname(tasksStorePath), { recursive: true });
 
@@ -159,8 +99,7 @@ export async function initTasksTable() {
   try {
     await access(testsStorePath);
   } catch {
-    const legacyTests = await readLegacyTestsFromTasksStore();
-    await writeTestsStore(legacyTests.length > 0 ? legacyTests : await buildDefaultTestsFromRunner());
+    await writeTestsStore([]);
   }
 
   const tasks = await readTasksStore();
@@ -170,8 +109,7 @@ export async function initTasksTable() {
 
   const tests = await readTestsStore();
   if (!Array.isArray(tests) || tests.length === 0) {
-    const legacyTests = await readLegacyTestsFromTasksStore();
-    await writeTestsStore(legacyTests.length > 0 ? legacyTests : await buildDefaultTestsFromRunner());
+    await writeTestsStore([]);
   }
 }
 
