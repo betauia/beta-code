@@ -24,6 +24,3 @@ pnpm-debug.log*
 # Ignore jobs that have not been cleard
 runner/jobs/*
 !runner/jobs
-
-# bare repo backup
-repo.git/
