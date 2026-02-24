@@ -4,11 +4,6 @@ export function getProblem(id: string): Problem | undefined {
   return problems.find(p => p.id === id);
 }
 
-export function getStarterCode(id: string): string {
-  const problem = getProblem(id);
-  return problem?.starterCode ?? '';
-}
-
 export interface Problem {
   id: string;
   title: string;

@@ -139,20 +139,6 @@ export async function addCompletedTask(userId: number, problemId: string): Promi
   return result.rowCount !== null && result.rowCount > 0;
 }
  
-// Get user's completed tasks
-export async function getCompletedTasks(userId: number): Promise<string[]> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `SELECT completed_tasks FROM users WHERE id = $1`,
-    [userId]
-  );
- 
-  if (result.rows.length === 0) {
-    return [];
-  }
- 
-  return result.rows[0].completed_tasks || [];
-}
 // Get all users for leaderboard
 export async function getAllUsers(): Promise<User[]> {
   const pool = await getPool() as any;
@@ -170,16 +156,6 @@ export async function deleteUser(userId: number): Promise<boolean> {
   const result = await pool.query(
     `DELETE FROM users WHERE id = $1`,
     [userId]
-  );
-  return result.rowCount !== null && result.rowCount > 0;
-}
- 
-// Set a user's completed_tasks directly (admin only)
-export async function setCompletedTasks(userId: number, tasks: string[]): Promise<boolean> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `UPDATE users SET completed_tasks = $2 WHERE id = $1 RETURNING id`,
-    [userId, tasks]
   );
   return result.rowCount !== null && result.rowCount > 0;
 }
