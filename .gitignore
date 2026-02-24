@@ -19,3 +19,7 @@ pnpm-debug.log*
 .idea/
 
 *.tar
+
+# Ignore jobs that have not been cleard
+runner/jobs/*
+!runner/jobs
