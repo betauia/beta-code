@@ -14,7 +14,7 @@ const starterCode = problem?.code_preview ?? "";
 
 <ProblemLayout activeId={id}>
   <section class="problem-page" data-problem-id={id}>
-    <h1>Problem {id}</h1>
+    <div class="problem-header"><h1>Problem {id}</h1>
 
     {problem?.type === "solve" && (
       <div class="task-type-badge solve-badge">Solve</div>
@@ -23,7 +23,7 @@ const starterCode = problem?.code_preview ?? "";
     {problem?.type === "fix" && (
       <div class="task-type-badge fix-badge">Bug Fix</div>
     )}
-
+    </div>
     <div class="problem-description">
       <p>{problem?.description ?? "Problem not found."}</p>
     </div>
@@ -418,4 +418,17 @@ const starterCode = problem?.code_preview ?? "";
     overflow-y: auto;
     line-height: 1.5;
   }
-</style>
+
+  .problem-header {
+    display: flex;
+    flex-direction: row;   
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .problem-header h1 {
+    margin: 0;  
+    margin-left: 35%;          
+  }
+  
+  </style>
