@@ -2,12 +2,15 @@
 export const prerender = false;
  
 import "../styles/global.css";
-import { problems } from "../data/problems";
+import { initTasksTable, getAllTasks } from "../lib/tasks";
 import { getCurrentUser } from "../lib/session";
 import Header from "../components/Header.astro";
  
 const user = await getCurrentUser(Astro.request);
 const completedTasks = user?.completed_tasks || [];
+
+await initTasksTable();
+const tasks = await getAllTasks();
 ---
  
 <html lang="en">
@@ -26,18 +29,18 @@ const completedTasks = user?.completed_tasks || [];
     <h1>All Tasks</h1>
     <p class="p-text">Choose a task to start coding.</p>
     {user && (
-      <p class="p-text">Completed: {completedTasks.length} / {problems.length}</p>
+            <p class="p-text">Completed: {completedTasks.length} / {tasks.length}</p>
     )}
     <ul style="list-style:none; padding:0; display:grid; gap:12px;">
-      {problems.map((t) => {
-        const isCompleted = completedTasks.includes(t.id);
+      {tasks.map((t) => {
+        const isCompleted = completedTasks.includes(String(t.id));
         return (
           <li class={`task-item ${isCompleted ? 'completed' : ''}`}>
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <strong>
                   {isCompleted && <span class="check-mark">✓ </span>}
-                  {t.title}
+                  {t.name}
                 </strong>
                 <div class="p-text">
                   {t.type === "solve" && <span class="type-tag solve-tag">Solve</span>}

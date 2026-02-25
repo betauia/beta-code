@@ -15,7 +15,12 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
-# jetbrains setting folder
+# IDE settings
 .idea/
+.vscode/
 
 *.tar
+
+# Ignore jobs that have not been cleard
+runner/jobs/*
+!runner/jobs
