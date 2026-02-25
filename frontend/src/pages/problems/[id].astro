@@ -389,6 +389,35 @@ const dataFiles = [
 
   const view = new EditorView({ state, parent: mountEl });
 
+   // ── Load saved code for this player (if any) ───────────────────────────
+  try {
+    const loadRes = await fetch(`/api/problems/load-code?problemId=${encodeURIComponent(problemId)}`);
+    if (loadRes.ok) {
+      const { code } = await loadRes.json();
+      if (code !== null && code !== undefined) {
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: code },
+        });
+      }
+    }
+  } catch (_) { /* not logged in or network error – keep starter code */ }
+ 
+  // ── Auto-save code on change (debounced) ───────────────────────────────
+  let saveTimer = null;
+  function scheduleSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      fetch("/api/problems/save-code", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ problemId, code: view.state.doc.toString() }),
+      }).catch(() => {});
+    }, 1000);
+  }
+ 
+  view.dom.addEventListener("keyup", scheduleSave);
+  view.dom.addEventListener("input", scheduleSave);
+  
   // ── Helpers ──────────────────────────────────────────────────────────────
   const getCode = () => view.state.doc.toString();
   const sleep   = (ms) => new Promise((r) => setTimeout(r, ms));
