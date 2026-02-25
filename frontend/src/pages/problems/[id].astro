@@ -23,17 +23,13 @@ const dataFiles = [
 ---
 
 <ProblemLayout activeId={id}>
-  <section class="problem-page" data-problem-id={id}>
-    <div class="problem-header"><h1>Problem {id}</h1>
-
-    {problem?.type === "solve" && (
-      <div class="task-type-badge solve-badge">Solve</div>
-    )}
-
-    {problem?.type === "fix" && (
-      <div class="task-type-badge fix-badge">Bug Fix</div>
-    )}
+  <section class="problem-page" data-problem-id={id} data-starter-code={starterCode}>
+    <div class="problem-header">
+      <h1>Problem {id}</h1>
+      {problem?.type === "solve" && <div class="task-type-badge solve-badge">Solve</div>}
+      {problem?.type === "fix"   && <div class="task-type-badge fix-badge">Bug Fix</div>}
     </div>
+
     <div class="problem-description">
       <p>{problem?.description ?? "Problem not found."}</p>
     </div>
@@ -42,20 +38,10 @@ const dataFiles = [
       <div class="code-box-header">
         <span class="language-label">C++</span>
       </div>
-      <div class="code-editor-wrapper">
-        <div id="lineNumbers" class="line-numbers" aria-hidden="true"></div>
-        <textarea
-          id="code"
-          class="code-editor"
-          spellcheck="false"
-          placeholder="// Write your C++ code here..."
-          set:text={starterCode}
-        ></textarea>
-      </div>
+      <div id="editor-mount"></div>
     </div>
 
     <div class="actions">
-      <!-- Button to run the code -->
       <button id="runBtn" type="button">Run</button>
     </div>
     <div id="judgeResult" class="judge-result">Ready.</div>
@@ -82,68 +68,340 @@ const dataFiles = [
   </section>
 </ProblemLayout>
 
-<!-- Client-side logic -->
 <script type="module">
+  import { EditorState } from "https://esm.sh/@codemirror/state@6";
+  import {
+    EditorView, keymap, lineNumbers, highlightActiveLine,
+    highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor,
+  } from "https://esm.sh/@codemirror/view@6";
+  import { defaultKeymap, history, historyKeymap } from "https://esm.sh/@codemirror/commands@6";
+  import { cpp } from "https://esm.sh/@codemirror/lang-cpp@6";
+  import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark@6";
+  import { bracketMatching, foldGutter, indentOnInput } from "https://esm.sh/@codemirror/language@6";
+  import {
+    closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap, acceptCompletion, completionStatus,
+  } from "https://esm.sh/@codemirror/autocomplete@6";
+  import { searchKeymap, highlightSelectionMatches } from "https://esm.sh/@codemirror/search@6";
+  import { lintKeymap } from "https://esm.sh/@codemirror/lint@6";
+
+  // ── C++ completion data ──────────────────────────────────────────────────
+  const K = (words) => words.map(w => ({ label: w, type: "keyword" }));
+  const T = (words) => words.map(w => ({ label: w, type: "type" }));
+
+  const keywords = K([
+    "alignas","alignof","and","and_eq","asm","auto","bitand","bitor","bool",
+    "break","case","catch","char","char8_t","char16_t","char32_t","class",
+    "compl","concept","const","consteval","constexpr","constinit","const_cast",
+    "continue","co_await","co_return","co_yield","decltype","default","delete",
+    "do","double","dynamic_cast","else","enum","explicit","export","extern",
+    "false","float","for","friend","goto","if","inline","int","long","mutable",
+    "namespace","new","noexcept","not","not_eq","nullptr","operator","or","or_eq",
+    "private","protected","public","register","reinterpret_cast","requires",
+    "return","short","signed","sizeof","static","static_assert","static_cast",
+    "struct","switch","template","this","thread_local","throw","true","try",
+    "typedef","typeid","typename","union","unsigned","using","virtual","void",
+    "volatile","wchar_t","while","xor","xor_eq",
+  ]);
+
+  const types = T([
+    "string","wstring","vector","deque","list","forward_list","array",
+    "stack","queue","priority_queue","set","multiset","map","multimap",
+    "unordered_set","unordered_multiset","unordered_map","unordered_multimap",
+    "pair","tuple","optional","variant","any","span",
+    "size_t","ptrdiff_t","int8_t","int16_t","int32_t","int64_t",
+    "uint8_t","uint16_t","uint32_t","uint64_t","intptr_t","uintptr_t",
+    "ifstream","ofstream","fstream","istringstream","ostringstream","stringstream",
+    "istream","ostream","iostream","shared_ptr","unique_ptr","weak_ptr",
+    "function","thread","mutex","exception","runtime_error","logic_error",
+  ]);
+
+  const functions = [
+    { label:"cout",            type:"variable", detail:"std::cout" },
+    { label:"cin",             type:"variable", detail:"std::cin" },
+    { label:"cerr",            type:"variable", detail:"std::cerr" },
+    { label:"endl",            type:"variable", detail:"std::endl" },
+    { label:"printf",          type:"function", detail:"(fmt, ...)" },
+    { label:"scanf",           type:"function", detail:"(fmt, ...)" },
+    { label:"getline",         type:"function", detail:"(stream, str)" },
+    { label:"abs",             type:"function", detail:"(x)" },
+    { label:"sqrt",            type:"function", detail:"(x)" },
+    { label:"pow",             type:"function", detail:"(base, exp)" },
+    { label:"ceil",            type:"function", detail:"(x)" },
+    { label:"floor",           type:"function", detail:"(x)" },
+    { label:"round",           type:"function", detail:"(x)" },
+    { label:"log",             type:"function", detail:"(x)" },
+    { label:"log2",            type:"function", detail:"(x)" },
+    { label:"log10",           type:"function", detail:"(x)" },
+    { label:"max",             type:"function", detail:"(a, b)" },
+    { label:"min",             type:"function", detail:"(a, b)" },
+    { label:"gcd",             type:"function", detail:"(a, b)" },
+    { label:"lcm",             type:"function", detail:"(a, b)" },
+    { label:"__gcd",           type:"function", detail:"(a, b)" },
+    { label:"sort",            type:"function", detail:"(first, last[, comp])" },
+    { label:"stable_sort",     type:"function", detail:"(first, last[, comp])" },
+    { label:"reverse",         type:"function", detail:"(first, last)" },
+    { label:"find",            type:"function", detail:"(first, last, val)" },
+    { label:"find_if",         type:"function", detail:"(first, last, pred)" },
+    { label:"count",           type:"function", detail:"(first, last, val)" },
+    { label:"count_if",        type:"function", detail:"(first, last, pred)" },
+    { label:"binary_search",   type:"function", detail:"(first, last, val)" },
+    { label:"lower_bound",     type:"function", detail:"(first, last, val)" },
+    { label:"upper_bound",     type:"function", detail:"(first, last, val)" },
+    { label:"next_permutation",type:"function", detail:"(first, last)" },
+    { label:"prev_permutation",type:"function", detail:"(first, last)" },
+    { label:"accumulate",      type:"function", detail:"(first, last, init)" },
+    { label:"fill",            type:"function", detail:"(first, last, val)" },
+    { label:"copy",            type:"function", detail:"(first, last, dest)" },
+    { label:"transform",       type:"function", detail:"(first, last, dest, op)" },
+    { label:"unique",          type:"function", detail:"(first, last)" },
+    { label:"swap",            type:"function", detail:"(a, b)" },
+    { label:"make_pair",       type:"function", detail:"(a, b)" },
+    { label:"make_tuple",      type:"function", detail:"(...)" },
+    { label:"tie",             type:"function", detail:"(...)" },
+    { label:"move",            type:"function", detail:"(x)" },
+    { label:"emplace_back",    type:"function", detail:"(...)" },
+    { label:"push_back",       type:"function", detail:"(val)" },
+    { label:"pop_back",        type:"function", detail:"()" },
+    { label:"push_front",      type:"function", detail:"(val)" },
+    { label:"pop_front",       type:"function", detail:"()" },
+    { label:"size",            type:"function", detail:"()" },
+    { label:"empty",           type:"function", detail:"()" },
+    { label:"clear",           type:"function", detail:"()" },
+    { label:"resize",          type:"function", detail:"(n[, val])" },
+    { label:"reserve",         type:"function", detail:"(n)" },
+    { label:"begin",           type:"function", detail:"()" },
+    { label:"end",             type:"function", detail:"()" },
+    { label:"rbegin",          type:"function", detail:"()" },
+    { label:"rend",            type:"function", detail:"()" },
+    { label:"front",           type:"function", detail:"()" },
+    { label:"back",            type:"function", detail:"()" },
+    { label:"at",              type:"function", detail:"(i)" },
+    { label:"insert",          type:"function", detail:"(pos, val)" },
+    { label:"erase",           type:"function", detail:"(pos)" },
+    { label:"substr",          type:"function", detail:"(pos[, len])" },
+    { label:"stoi",            type:"function", detail:"(str)" },
+    { label:"stoll",           type:"function", detail:"(str)" },
+    { label:"stod",            type:"function", detail:"(str)" },
+    { label:"to_string",       type:"function", detail:"(val)" },
+    { label:"atoi",            type:"function", detail:"(str)" },
+    { label:"strlen",          type:"function", detail:"(str)" },
+    { label:"strcmp",          type:"function", detail:"(a, b)" },
+    { label:"memset",          type:"function", detail:"(ptr, val, size)" },
+    { label:"memcpy",          type:"function", detail:"(dest, src, size)" },
+    { label:"exit",            type:"function", detail:"(code)" },
+    { label:"assert",          type:"function", detail:"(expr)" },
+    { label:"INT_MAX",         type:"constant" },
+    { label:"INT_MIN",         type:"constant" },
+    { label:"LLONG_MAX",       type:"constant" },
+    { label:"LLONG_MIN",       type:"constant" },
+    { label:"ULLONG_MAX",      type:"constant" },
+    { label:"DBL_MAX",         type:"constant" },
+    { label:"FLT_MAX",         type:"constant" },
+  ];
+
+  const preprocessor = K([
+    "#include","#define","#undef","#ifdef","#ifndef",
+    "#if","#elif","#else","#endif","#pragma once","#pragma comment",
+  ]);
+
+  const snippets = [
+    {
+      label: "main",
+      type: "function",
+      detail: "int main() entrypoint",
+      apply: "int main() {\n    \n    return 0;\n}",
+    },
+    {
+      label: "#include <bits/stdc++.h>",
+      type: "keyword",
+      detail: "competitive programming header",
+      apply: "#include <bits/stdc++.h>\nusing namespace std;\n",
+    },
+    {
+      label: "for loop",
+      type: "keyword",
+      detail: "for (int i = 0; i < n; i++)",
+      apply: "for (int i = 0; i < n; i++) {\n    \n}",
+    },
+    {
+      label: "range for",
+      type: "keyword",
+      detail: "for (auto& x : container)",
+      apply: "for (auto& x : ) {\n    \n}",
+    },
+    {
+      label: "while loop",
+      type: "keyword",
+      apply: "while () {\n    \n}",
+    },
+    {
+      label: "if else",
+      type: "keyword",
+      apply: "if () {\n    \n} else {\n    \n}",
+    },
+    {
+      label: "vector<int>",
+      type: "type",
+      apply: "vector<int> ",
+    },
+    {
+      label: "vector<vector<int>>",
+      type: "type",
+      apply: "vector<vector<int>> ",
+    },
+    {
+      label: "unordered_map<int,int>",
+      type: "type",
+      apply: "unordered_map<int, int> ",
+    },
+    {
+      label: "priority_queue max",
+      type: "type",
+      apply: "priority_queue<int> ",
+    },
+    {
+      label: "priority_queue min",
+      type: "type",
+      apply: "priority_queue<int, vector<int>, greater<int>> ",
+    },
+    {
+      label: "lambda",
+      type: "function",
+      detail: "auto fn = [&](...) { ... }",
+      apply: "auto  = [&]() {\n    \n};",
+    },
+    {
+      label: "ios fast",
+      type: "function",
+      detail: "disable sync for fast I/O",
+      apply: "ios_base::sync_with_stdio(false);\ncin.tie(NULL);",
+    },
+  ];
+
+  const allCompletions = [...keywords, ...types, ...functions, ...preprocessor, ...snippets];
+
+  function cppCompletionSource(context) {
+    const word = context.matchBefore(/[#\w][\w<>]*/);
+    if (!word) return null;
+    if (word.from === word.to && !context.explicit) return null;
+    const input = word.text.toLowerCase();
+    const options = allCompletions.filter(c => c.label.toLowerCase().startsWith(input));
+    return { from: word.from, options };
+  }
+
+  // ── Setup ────────────────────────────────────────────────────────────────
   const root = document.querySelector(".problem-page");
   if (!root) throw new Error("problem-page root not found");
 
-  const runBtn = root.querySelector("#runBtn");
-  const resultBox = root.querySelector("#judgeResult");
-  const codeEl = root.querySelector("#code");
-  const lineNumbersEl = root.querySelector("#lineNumbers");
+  const runBtn      = root.querySelector("#runBtn");
+  const resultBox   = root.querySelector("#judgeResult");
+  const mountEl     = root.querySelector("#editor-mount");
+  const problemId   = root.dataset.problemId;
+  const starterCode = root.dataset.starterCode ?? "";
 
-  const problemId = root.dataset.problemId;
+  // ── Editor theme ─────────────────────────────────────────────────────────
+  const editorTheme = EditorView.theme({
+    "&": {
+      fontSize: "14px",
+      fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace',
+    },
+    ".cm-scroller": {
+      overflow: "auto",
+      minHeight: "400px",
+      maxHeight: "600px",
+      lineHeight: "1.5",
+    },
+    ".cm-content": { padding: "1rem", caretColor: "#d4d4d4" },
+    ".cm-gutters": {
+      backgroundColor: "#252526",
+      borderRight: "1px solid #333",
+      color: "#858585",
+      minWidth: "50px",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      paddingRight: "0.5rem",
+      minWidth: "40px",
+      textAlign: "right",
+    },
+    ".cm-activeLine":       { backgroundColor: "#2a2d2e" },
+    ".cm-activeLineGutter": { backgroundColor: "#2a2d2e" },
+    "&.cm-focused .cm-cursor": { borderLeftColor: "#d4d4d4" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+      backgroundColor: "#264f78",
+    },
+    // Autocomplete dropdown
+    ".cm-tooltip.cm-tooltip-autocomplete": {
+      backgroundColor: "#252526",
+      border: "1px solid #454545",
+      borderRadius: "4px",
+    },
+    ".cm-tooltip-autocomplete ul li": {
+      fontFamily: '"JetBrains Mono", "Consolas", monospace',
+      fontSize: "13px",
+      color: "#d4d4d4",
+    },
+    ".cm-tooltip-autocomplete ul li[aria-selected]": {
+      backgroundColor: "#094771",
+      color: "#ffffff",
+    },
+    ".cm-completionDetail": {
+      color: "#888",
+      fontSize: "12px",
+    },
+    ".cm-completionMatchedText": {
+      textDecoration: "none",
+      fontWeight: "bold",
+      color: "#18a3ff",
+    },
+  }, { dark: true });
 
-  // Line numbers synchronization
-  function updateLineNumbers() {
-    const lines = codeEl.value.split("\n");
-    const lineCount = lines.length;
-    
-    const lineNumbersHTML = [];
-    for (let i = 1; i <= lineCount; i++) {
-      lineNumbersHTML.push(`<div class="line-number">${i}</div>`);
-    }
-    lineNumbersEl.innerHTML = lineNumbersHTML.join("");
-  }
-
-  function syncScroll() {
-    lineNumbersEl.scrollTop = codeEl.scrollTop;
-  }
-
-  // Initialize with one line number
-  updateLineNumbers();
-
-  // Update line numbers on input
-  codeEl.addEventListener("input", updateLineNumbers);
-  codeEl.addEventListener("scroll", syncScroll);
-
-  // Handle Tab key for proper indentation
-  codeEl.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const start = codeEl.selectionStart;
-      const end = codeEl.selectionEnd;
-      const value = codeEl.value;
-
-      // Insert 4 spaces
-      codeEl.value = value.substring(0, start) + "    " + value.substring(end);
-      codeEl.selectionStart = codeEl.selectionEnd = start + 4;
-      
-      updateLineNumbers();
-    }
+  // ── Build editor ─────────────────────────────────────────────────────────
+  const state = EditorState.create({
+    doc: starterCode,
+    extensions: [
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      history(),
+      foldGutter(),
+      drawSelection(),
+      rectangularSelection(),
+      crosshairCursor(),
+      indentOnInput(),
+      bracketMatching(),
+      closeBrackets(),
+      autocompletion({ override: [cppCompletionSource], activateOnTyping: true }),
+      highlightActiveLine(),
+      highlightSelectionMatches(),
+      cpp(),
+      oneDark,
+      editorTheme,
+      keymap.of([
+        { key: "Tab", run: (view) => { if (completionStatus(view.state) !== null) return acceptCompletion(view); const { from, to } = view.state.selection.main; view.dispatch({ changes: { from, to, insert: "    " }, selection: { anchor: from + 4 } }); return true; } },
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...completionKeymap,
+        ...lintKeymap,
+      ]),
+    ],
   });
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const view = new EditorView({ state, parent: mountEl });
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const getCode = () => view.state.doc.toString();
+  const sleep   = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function showResult(headerText, detailsText) {
     resultBox.textContent = "";
     const h = document.createElement("div");
-    h.className = "verdict-header";
+    h.className   = "verdict-header";
     h.textContent = headerText;
     resultBox.appendChild(h);
     if (detailsText) {
       const pre = document.createElement("pre");
-      pre.className = "error-details";
+      pre.className   = "error-details";
       pre.textContent = detailsText;
       resultBox.appendChild(pre);
     }
@@ -151,7 +409,7 @@ const dataFiles = [
 
   async function pollStatus(jobId) {
     while (true) {
-      const res = await fetch(`/api/problems/status?jobId=${encodeURIComponent(jobId)}`);
+      const res  = await fetch(`/api/problems/status?jobId=${encodeURIComponent(jobId)}`);
       const data = await res.json();
 
       if (data.state === "waiting" || data.state === "active") {
@@ -159,48 +417,33 @@ const dataFiles = [
         await sleep(500);
         continue;
       }
-
       if (data.state === "failed") {
         resultBox.textContent = "❌ Error: " + (data.error ?? "Unknown");
         runBtn.disabled = false;
         return;
       }
-
       if (data.state === "completed") {
         const verdict = data.result?.verdict ?? "Unknown";
-        const result = data.result ?? {};
-
-        // Build rich output
+        const result  = data.result ?? {};
         const headerMap = {
-          Accepted: "✅ Accepted",
-          "Wrong Answer": "❌ Wrong Answer",
-          "Compile Error": "🛠 Compile Error",
-          "Runtime Error": "💥 Runtime Error",
-          "Time Limit Exceeded": "⏱ Time Limit Exceeded",
+          Accepted:             "✅ Accepted",
+          "Wrong Answer":       "❌ Wrong Answer",
+          "Compile Error":      "🛠 Compile Error",
+          "Runtime Error":      "💥 Runtime Error",
+          "Time Limit Exceeded":"⏱ Time Limit Exceeded",
         };
-
         const header = headerMap[verdict] ?? verdict;
-        let details = "";
+        let details  = "";
 
         if (verdict === "Compile Error" && result.error) {
           details = result.error;
         } else if (verdict === "Runtime Error") {
-          if (result.failedTest) {
-            details += `Failed on test: ${result.failedTest}\n`;
-          }
-          if (result.input) {
-            details += `\n--- Input ---\n${result.input}\n`;
-          }
-          if (result.error) {
-            details += `\n--- Error ---\n${result.error}`;
-          }
+          if (result.failedTest) details += `Failed on test: ${result.failedTest}\n`;
+          if (result.input)      details += `\n--- Input ---\n${result.input}\n`;
+          if (result.error)      details += `\n--- Error ---\n${result.error}`;
         } else if (verdict === "Time Limit Exceeded") {
-          if (result.failedTest) {
-            details = `Exceeded time limit on test: ${result.failedTest}`;
-          }
-          if (result.input) {
-            details += `\n\n--- Input ---\n${result.input}`;
-          }
+          if (result.failedTest) details  = `Exceeded time limit on test: ${result.failedTest}`;
+          if (result.input)      details += `\n\n--- Input ---\n${result.input}`;
         } else if (verdict === "Wrong Answer" && result.tests) {
           const failed = result.tests.find((t) => t.status === "WA");
           if (failed && failed.name !== "hidden") {
@@ -214,15 +457,13 @@ const dataFiles = [
 
         showResult(header, details);
 
-        // Mark task as completed if accepted
         if (verdict === "Accepted") {
           fetch("/api/problems/complete-task", {
-            method: "POST",
+            method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ problemId }),
-          }).catch(() => {}); // Silently fail if not logged in
+            body:    JSON.stringify({ problemId }),
+          }).catch(() => {});
         }
-
         runBtn.disabled = false;
         return;
       }
@@ -234,16 +475,13 @@ const dataFiles = [
   }
 
   runBtn.addEventListener("click", async () => {
-    runBtn.disabled = true;
+    runBtn.disabled       = true;
     resultBox.textContent = "📤 Submitting...";
 
     const res = await fetch("/api/problems/submit", {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        problemId,
-        code: codeEl.value,
-      }),
+      body:    JSON.stringify({ problemId, code: getCode() }),
     });
 
     let data;
@@ -272,7 +510,7 @@ const dataFiles = [
     gap: 1rem;
   }
 
-   .task-type-badge {
+  .task-type-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
@@ -288,14 +526,13 @@ const dataFiles = [
     color: #2ecc71;
     border: 1px solid rgba(46, 204, 113, 0.3);
   }
- 
+
   .fix-badge {
     background: rgba(230, 126, 34, 0.15);
     color: #e67e22;
     border: 1px solid rgba(230, 126, 34, 0.3);
   }
 
-  /* Code Box Container */
   .code-box {
     border: 1px solid #333;
     border-radius: 8px;
@@ -303,7 +540,6 @@ const dataFiles = [
     background: #1e1e1e;
   }
 
-  /* Code Box Header */
   .code-box-header {
     display: flex;
     justify-content: space-between;
@@ -320,59 +556,8 @@ const dataFiles = [
     font-weight: 500;
   }
 
-  /* Code Editor Wrapper */
-  .code-editor-wrapper {
-    display: flex;
-    position: relative;
-    min-height: 400px;
-    max-height: 600px;
-    background: #1e1e1e;
-  }
+  #editor-mount { background: #1e1e1e; }
 
-  /* Line Numbers */
-  .line-numbers {
-    flex-shrink: 0;
-    width: 50px;
-    background: #252526;
-    color: #858585;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    padding: 1rem 0.5rem;
-    text-align: right;
-    user-select: none;
-    overflow-y: hidden;
-    border-right: 1px solid #333;
-    white-space: pre;
-  }
-
-  .line-number {
-    display: block;
-  }
-
-  /* Code Editor */
-  .code-editor {
-    flex: 1;
-    width: 100%;
-    background: transparent;
-    color: #d4d4d4;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    padding: 1rem;
-    border: none;
-    outline: none;
-    resize: none;
-    overflow-y: auto;
-    white-space: pre;
-    overflow-wrap: normal;
-  }
-
-  .code-editor::placeholder {
-    color: #6a6a6a;
-  }
-
-  /* Inline Code Styling */
   code {
     background: #2d2d2d;
     color: #ce9178;
@@ -382,17 +567,9 @@ const dataFiles = [
     font-size: 0.9em;
   }
 
-  /* Actions */
-  .actions {
-    display: flex;
-    align-items: center;
-  }
- 
-  .data-files {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
+  .actions { display: flex; align-items: center; }
+
+  .data-files { display: flex; flex-direction: column; gap: 0.75rem; }
 
   .data-file-block {
     border: 1px solid #333;
@@ -438,9 +615,7 @@ const dataFiles = [
     border-right: 1px solid #333;
   }
 
-  .data-file-line-number {
-    display: block;
-  }
+  .data-file-line-number { display: block; }
 
   .data-file-content {
     flex: 1;
@@ -467,16 +642,9 @@ const dataFiles = [
     transition: background 0.2s;
   }
 
-  button#runBtn:hover:not(:disabled) {
-    background: #1177bb;
-  }
+  button#runBtn:hover:not(:disabled) { background: #1177bb; }
+  button#runBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  button#runBtn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  /* Judge Result */
   .judge-result {
     padding: 0.875rem 1rem;
     background: #1a1a1a;
@@ -488,9 +656,7 @@ const dataFiles = [
     color: #d4d4d4;
   }
 
-  .verdict-header {
-    margin-bottom: 0.25rem;
-  }
+  .verdict-header { margin-bottom: 0.25rem; }
 
   .error-details {
     margin: 0.5rem 0 0 0;
@@ -512,14 +678,10 @@ const dataFiles = [
 
   .problem-header {
     display: flex;
-    flex-direction: row;   
+    flex-direction: row;
     align-items: center;
     gap: 0.75rem;
   }
 
-  .problem-header h1 {
-    margin: 0;  
-    margin-left: 35%;          
-  }
-  
-  </style>
+  .problem-header h1 { margin: 0; }
+</style>

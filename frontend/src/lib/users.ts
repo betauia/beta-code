@@ -172,3 +172,42 @@ export async function removeCompletedTask(userId: number, problemId: string): Pr
   );
   return result.rowCount !== null && result.rowCount > 0;
 }
+
+// Initialize the user_code_saves table
+export async function initCodeSavesTable() {
+  const pool = await getPool() as any;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_code_saves (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      problem_id VARCHAR(50) NOT NULL,
+      code TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, problem_id)
+    )
+  `);
+}
+ 
+// Save a player's code for a specific problem (upsert)
+export async function saveUserCode(userId: number, problemId: string, code: string): Promise<void> {
+  const pool = await getPool() as any;
+  await pool.query(
+    `INSERT INTO user_code_saves (user_id, problem_id, code, updated_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT (user_id, problem_id)
+     DO UPDATE SET code = $3, updated_at = CURRENT_TIMESTAMP`,
+    [userId, problemId, code]
+  );
+}
+ 
+// Load a player's saved code for a specific problem
+export async function loadUserCode(userId: number, problemId: string): Promise<string | null> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT code FROM user_code_saves WHERE user_id = $1 AND problem_id = $2`,
+    [userId, problemId]
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows[0].code;
+}
