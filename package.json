@@ -7,7 +7,7 @@
     "install:all": "npm install --prefix frontend && npm install --prefix runner && npm install",
     "setup": "docker compose build sandbox",
     "prestart": "npm run setup",
-    "start": "concurrently \"docker compose up redis postgres\" \"npm --prefix frontend run dev -- --host\" \"sleep 5 && cross-env REDIS_URL=redis://127.0.0.1:6379 node runner/worker.js\"",
+    "start": "concurrently \"docker compose up redis postgres\" \"npm --prefix frontend run dev -- --host\" \"cross-env REDIS_URL=redis://127.0.0.1:6379 node runner/worker.js\"",
     "stop": "docker compose down"
   }
 }

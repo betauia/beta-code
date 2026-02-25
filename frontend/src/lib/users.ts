@@ -28,17 +28,25 @@ export async function initUsersTable() {
   `);
   // Create default admin user if it doesn't exist
   const existing = await pool.query(
-    `SELECT id FROM users WHERE username = 'admin'`
+    `SELECT id FROM users WHERE id = 0 OR username = 'admin'`
   );
   if (existing.rows.length === 0) {
     const salt = crypto.randomBytes(16).toString("hex");
     const passwordHash = hashPassword("admin123", salt);
     await pool.query(
-      `INSERT INTO users (username, password_hash, salt, completed_tasks, is_admin)
-       VALUES ('admin', $1, $2, '{}', TRUE)`,
+       `INSERT INTO users (id, username, password_hash, salt, completed_tasks, is_admin)
+       VALUES (0, 'admin', $1, $2, '{}', TRUE)`,
       [passwordHash, salt]
     );
   }
+  
+  await pool.query(`
+    SELECT setval(
+      pg_get_serial_sequence('users','id'),
+      GREATEST((SELECT COALESCE(MAX(id), 0) FROM users) + 1, 1),
+      false
+    )
+  `);
 }
  
 // Hash password with salt
@@ -131,20 +139,6 @@ export async function addCompletedTask(userId: number, problemId: string): Promi
   return result.rowCount !== null && result.rowCount > 0;
 }
  
-// Get user's completed tasks
-export async function getCompletedTasks(userId: number): Promise<string[]> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `SELECT completed_tasks FROM users WHERE id = $1`,
-    [userId]
-  );
- 
-  if (result.rows.length === 0) {
-    return [];
-  }
- 
-  return result.rows[0].completed_tasks || [];
-}
 // Get all users for leaderboard
 export async function getAllUsers(): Promise<User[]> {
   const pool = await getPool() as any;
@@ -162,16 +156,6 @@ export async function deleteUser(userId: number): Promise<boolean> {
   const result = await pool.query(
     `DELETE FROM users WHERE id = $1`,
     [userId]
-  );
-  return result.rowCount !== null && result.rowCount > 0;
-}
- 
-// Set a user's completed_tasks directly (admin only)
-export async function setCompletedTasks(userId: number, tasks: string[]): Promise<boolean> {
-  const pool = await getPool() as any;
-  const result = await pool.query(
-    `UPDATE users SET completed_tasks = $2 WHERE id = $1 RETURNING id`,
-    [userId, tasks]
   );
   return result.rowCount !== null && result.rowCount > 0;
 }

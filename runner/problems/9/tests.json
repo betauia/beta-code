@@ -1,9 +1,0 @@
-[
-  {
-    "name": "sample1",
-    "input": "3\n",
-    "expected": "Wendy Johnson\nOlivia Miller\nDavid Garcia\nMona Garcia\nSky Garcia\nSky Anderson\nAlpha Jackson\nSolo White\nSky Clark\nSky Lewis\nOlivia Torres\nSky Walker",
-    "hidden": false,
-    "files": ["data.csv"]
-  }
-]

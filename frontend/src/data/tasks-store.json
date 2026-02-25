@@ -1,0 +1,94 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "A + B",
+      "description": "Read two integers from stdin and print their sum.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b;\n}\n",
+      "points": 50,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Count the E's",
+      "description": "Read a single word from stdin and print how many times the letter e appears.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a word and count the letter 'e'\n}\n",
+      "points": 50,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "FizzBuzz",
+      "description": "Print numbers 1..N using Fizz/Buzz/FizzBuzz rules.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your FizzBuzz solution here\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "Fix the Sum",
+      "description": "This program should compute 1 + 2 + ... + N, but has a bug.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    int sum;\n    for (int i = 1; i <= n; i++) {\n        sum = sum + i;\n    }\n    cout << sum << endl;\n    return 0;\n}\n",
+      "points": 60,
+      "type": "fix",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "name": "JSON Name Lookup",
+      "description": "Read a name and look up its score in data.json.",
+      "code_preview": "#include <iostream>\nint main() {\n    // Fix the lookup bug\n}\n",
+      "points": 100,
+      "type": "fix",
+      "difficulty": "Medium",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "name": "CSV Average",
+      "description": "Read a column name and compute average from data.csv.",
+      "code_preview": "#include <iostream>\nint main() {\n    // Fix CSV parsing\n}\n",
+      "points": 100,
+      "type": "fix",
+      "difficulty": "Medium",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "name": "CSV Top Scorer",
+      "description": "Find the highest scorer in data.csv.",
+      "code_preview": "#include <iostream>\nint main() {\n    // Open data.csv and find top scorer\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "name": "JSON Inventory Total",
+      "description": "Compute total inventory value from data.json.",
+      "code_preview": "#include <iostream>\nint main() {\n    // Open data.json and compute total\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "name": "CSV Score reader",
+      "description": "Read data.csv and print names matching the input score.",
+      "code_preview": "#include <iostream>\nint main() {\n    // Read data.csv and find matching scores\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}

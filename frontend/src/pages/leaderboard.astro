@@ -2,9 +2,9 @@
 export const prerender = false;
 
 import "../styles/global.css";
-import { problems } from "../data/problems";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
+import { initTasksTable, getAllTasks, type Task } from "../lib/tasks";
 import Header from "../components/Header.astro";
 
 const user = await getCurrentUser(Astro.request);
@@ -16,10 +16,18 @@ try {
   console.warn("Failed to load users for leaderboard", error);
   users = [];
 }
-const pointsById = new Map(problems.map((problem) => [problem.id, problem.points]));
+
+let dbTasks: Task[] = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks for leaderboard", error);
+}
+const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
 
 const leaderboard = users
-.filter((entry) => !entry.is_admin)
+  .filter((entry) => !entry.is_admin)
   .map((entry) => {
     const completed = entry.completed_tasks || [];
     const totalPoints = completed.reduce((sum, taskId) => sum + (pointsById.get(taskId) ?? 0), 0);
@@ -47,12 +55,12 @@ const currentUserIndex = user
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width" />
     <title>Leaderboard - BETA-CODE</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
   </head>
   <body>
-     <Header user={user} />
+    <Header user={user} />
 
     <main class="leaderboard-page">
       <div class="leaderboard-intro">
@@ -96,7 +104,6 @@ const currentUserIndex = user
     </main>
 
     <style>
-
       .leaderboard-page {
         max-width: 960px;
         margin: 0 auto;
