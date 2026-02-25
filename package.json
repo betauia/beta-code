@@ -9,5 +9,8 @@
     "prestart": "npm run setup",
     "start": "concurrently \"docker compose up redis postgres\" \"npm --prefix frontend run dev -- --host\" \"cross-env REDIS_URL=redis://127.0.0.1:6379 node runner/worker.js\"",
     "stop": "docker compose down"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.0"
   }
 }
