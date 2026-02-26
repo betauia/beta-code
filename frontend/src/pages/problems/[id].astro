@@ -280,12 +280,51 @@ const dataFiles = [
 
   const allCompletions = [...keywords, ...types, ...functions, ...preprocessor, ...snippets];
 
+  // ── Extract user-defined identifiers from the document ───────────────────
+  function extractUserIdentifiers(docText) {
+    const identifiers = new Set();
+    const reserved = new Set([
+      "main","if","for","while","return","else","do","switch","case",
+      "break","continue","default","namespace","using","class","struct",
+      "enum","template","typename","typedef","public","private","protected",
+    ]);
+ 
+    // Plain type declarations: int x, float* y, auto& z, etc.
+    const declRe = /\b(?:int|long|short|char|float|double|bool|auto|void|unsigned|signed|string|wstring|size_t|ptrdiff_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|intptr_t|uintptr_t)\s*[*&]?\s*([a-zA-Z_]\w*)\s*(?:[=,;\[\(])/gm;
+    // Template type declarations: vector<int> v, map<string,int> m, etc.
+    const tmplRe = /\b\w+(?:<[^>]*>)+\s+([a-zA-Z_]\w*)\s*(?:[=,;\[\(])/gm;
+    // Function/method definitions: returnType name(
+    const funcRe = /\b([a-zA-Z_]\w*)\s*\(/gm;
+ 
+    let m;
+    while ((m = declRe.exec(docText)) !== null)
+      if (m[1] && !reserved.has(m[1])) identifiers.add(m[1]);
+    while ((m = tmplRe.exec(docText)) !== null)
+      if (m[1] && !reserved.has(m[1])) identifiers.add(m[1]);
+    while ((m = funcRe.exec(docText)) !== null)
+      if (m[1] && !reserved.has(m[1])) identifiers.add(m[1]);
+ 
+    return [...identifiers];
+  }
+
   function cppCompletionSource(context) {
     const word = context.matchBefore(/[#\w][\w<>]*/);
     if (!word) return null;
     if (word.from === word.to && !context.explicit) return null;
     const input = word.text.toLowerCase();
-    const options = allCompletions.filter(c => c.label.toLowerCase().startsWith(input));
+    // Merge static completions with live user-defined identifiers
+    const docText = context.state.doc.toString();
+    const userDefined = extractUserIdentifiers(docText).map(name => ({
+      label: name, type: "variable", detail: "user-defined",
+    }));
+    const seen = new Set();
+    const merged = [...allCompletions, ...userDefined].filter(c => {
+      if (seen.has(c.label)) return false;
+      seen.add(c.label);
+      return true;
+    });
+ 
+    const options = merged.filter(c => c.label.toLowerCase().startsWith(input));
     return { from: word.from, options };
   }
 
