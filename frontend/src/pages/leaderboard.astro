@@ -59,6 +59,7 @@ const currentUserIndex = user
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   </head>
   <body>
     <Header user={user} />
@@ -126,13 +127,16 @@ const currentUserIndex = user
       async function buildGraph() {
         const res = await fetch('/api/completions');
         if (!res.ok) return;
-        const { completions, pointsById } = await res.json();
+        const { completions, pointsById, competitionStart } = await res.json();
  
         if (completions.length === 0) {
           const container = document.querySelector('.graph-card');
           if (container) container.innerHTML = '<p style="color: var(--small-text); text-align: center; padding: 24px;">No completions yet</p>';
           return;
         }
+
+        const startTime = competitionStart ? new Date(competitionStart) : new Date(completions[0].completed_at);
+        const now = new Date();
  
         // Group completions by user
         const byUser = {};
@@ -145,33 +149,25 @@ const currentUserIndex = user
           });
         }
  
-        // Collect all unique timestamps and sort them
-        const allTimes = [...new Set(completions.map(c => new Date(c.completed_at).getTime()))].sort((a, b) => a - b);
-        const labels = allTimes.map(t => {
-          const d = new Date(t);
-          return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        });
- 
-        // Build datasets: for each user, cumulative points at each timestamp
+        // Build datasets: for each user, cumulative points over time
         const usernames = Object.keys(byUser);
         const datasets = usernames.map((username, i) => {
           const events = byUser[username];
-          let cumulative = 0;
-          // Map of time -> cumulative points after that event
-          const pointsAtTime = new Map();
-          for (const ev of events) {
-            cumulative += ev.points;
-            pointsAtTime.set(ev.time.getTime(), cumulative);
-          }
+          // Sort events by time
+          events.sort((a, b) => a.time - b.time);
  
-          // Build data array: for each global timestamp, use last known cumulative
-          let runningTotal = 0;
-          const data = allTimes.map(t => {
-            if (pointsAtTime.has(t)) {
-              runningTotal = pointsAtTime.get(t);
-            }
-            return runningTotal;
-          });
+          // Start at 0 points at competition start
+          const data = [{ x: startTime, y: 0 }];
+          let cumulative = 0;
+          for (const ev of events) {
+            // Step up: add point just before with old value, then new value
+            data.push({ x: ev.time, y: cumulative });
+            cumulative += ev.points;
+            data.push({ x: ev.time, y: cumulative });
+          }
+
+          // Extend line to current time
+          data.push({ x: now, y: cumulative });
  
           const color = CHART_COLORS[i % CHART_COLORS.length];
           return {
@@ -179,9 +175,9 @@ const currentUserIndex = user
             data,
             borderColor: color,
             backgroundColor: color,
-            tension: 0.3,
-            pointRadius: 4,
-            pointHoverRadius: 6,
+            tension: 0,
+            pointRadius: 0,
+            pointHoverRadius: 4,
             fill: false,
           };
         });
@@ -189,11 +185,11 @@ const currentUserIndex = user
         const canvas = document.getElementById('completionGraph');
         new Chart(canvas, {
           type: 'line',
-          data: { labels, datasets },
+          data: { datasets },
           options: {
             responsive: true,
             interaction: {
-              mode: 'index',
+              mode: 'nearest',
               intersect: false,
             },
             plugins: {
@@ -213,6 +209,13 @@ const currentUserIndex = user
             },
             scales: {
               x: {
+                type: 'time',
+                min: startTime.getTime(),
+                max: now.getTime(),
+                time: {
+                  displayFormats: { hour: 'HH:mm', minute: 'HH:mm' },
+                  tooltipFormat: 'HH:mm',
+                },
                 ticks: { color: '#A1B1D1', font: { size: 11 }, maxRotation: 45 },
                 grid: { color: 'rgba(31, 43, 67, 0.5)' },
               },
