@@ -58,6 +58,7 @@ const currentUserIndex = user
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <Header user={user} />
@@ -71,6 +72,11 @@ const currentUserIndex = user
             Your rank: <strong>#{currentUserIndex + 1}</strong>
           </p>
         )}
+      </div>
+      <div class="graph-section">
+        <div class="graph-card">
+          <canvas id="completionGraph"></canvas>
+        </div>
       </div>
 
       {leaderboard.length === 0 ? (
@@ -102,6 +108,127 @@ const currentUserIndex = user
         </div>
       )}
     </main>
+
+  <script defer>
+      const CHART_COLORS = [
+        'rgb(0, 133, 254)',
+        'rgb(255, 99, 132)',
+        'rgb(75, 192, 192)',
+        'rgb(255, 205, 86)',
+        'rgb(153, 102, 255)',
+        'rgb(255, 159, 64)',
+        'rgb(54, 162, 235)',
+        'rgb(201, 203, 207)',
+        'rgb(0, 255, 127)',
+        'rgb(255, 105, 180)',
+      ];
+ 
+      async function buildGraph() {
+        const res = await fetch('/api/completions');
+        if (!res.ok) return;
+        const { completions, pointsById } = await res.json();
+ 
+        if (completions.length === 0) {
+          const container = document.querySelector('.graph-card');
+          if (container) container.innerHTML = '<p style="color: var(--small-text); text-align: center; padding: 24px;">No completions yet</p>';
+          return;
+        }
+ 
+        // Group completions by user
+        const byUser = {};
+        for (const c of completions) {
+          if (!byUser[c.username]) byUser[c.username] = [];
+          byUser[c.username].push({
+            taskId: c.task_id,
+            time: new Date(c.completed_at),
+            points: pointsById[c.task_id] || 0,
+          });
+        }
+ 
+        // Collect all unique timestamps and sort them
+        const allTimes = [...new Set(completions.map(c => new Date(c.completed_at).getTime()))].sort((a, b) => a - b);
+        const labels = allTimes.map(t => {
+          const d = new Date(t);
+          return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        });
+ 
+        // Build datasets: for each user, cumulative points at each timestamp
+        const usernames = Object.keys(byUser);
+        const datasets = usernames.map((username, i) => {
+          const events = byUser[username];
+          let cumulative = 0;
+          // Map of time -> cumulative points after that event
+          const pointsAtTime = new Map();
+          for (const ev of events) {
+            cumulative += ev.points;
+            pointsAtTime.set(ev.time.getTime(), cumulative);
+          }
+ 
+          // Build data array: for each global timestamp, use last known cumulative
+          let runningTotal = 0;
+          const data = allTimes.map(t => {
+            if (pointsAtTime.has(t)) {
+              runningTotal = pointsAtTime.get(t);
+            }
+            return runningTotal;
+          });
+ 
+          const color = CHART_COLORS[i % CHART_COLORS.length];
+          return {
+            label: username,
+            data,
+            borderColor: color,
+            backgroundColor: color,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: false,
+          };
+        });
+ 
+        const canvas = document.getElementById('completionGraph');
+        new Chart(canvas, {
+          type: 'line',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#A1B1D1',
+                  font: { family: 'Orbitron, sans-serif', size: 12 },
+                },
+              },
+              tooltip: {
+                backgroundColor: '#151E2D',
+                titleColor: '#e3e4e7',
+                bodyColor: '#A1B1D1',
+                borderColor: '#1f2b43',
+                borderWidth: 1,
+              },
+            },
+            scales: {
+              x: {
+                ticks: { color: '#A1B1D1', font: { size: 11 }, maxRotation: 45 },
+                grid: { color: 'rgba(31, 43, 67, 0.5)' },
+              },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Points', color: '#A1B1D1', font: { family: 'Orbitron, sans-serif' } },
+                ticks: { color: '#A1B1D1' },
+                grid: { color: 'rgba(31, 43, 67, 0.5)' },
+              },
+            },
+          },
+        });
+      }
+ 
+      buildGraph();
+    </script>
 
     <style>
       .leaderboard-page {
@@ -160,6 +287,22 @@ const currentUserIndex = user
         background: rgba(255, 174, 0, 0.08);
         border: 1px solid rgba(255, 174, 0, 0.25);
         color: var(--small-text);
+      }
+
+      .graph-section {
+        margin-top: 48px;
+      }
+ 
+      .graph-section h2 {
+        margin-bottom: 8px;
+      }
+ 
+      .graph-card {
+        background: #111b2b;
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 16px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
       }
     </style>
   </body>

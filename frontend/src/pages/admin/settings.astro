@@ -54,6 +54,7 @@ const competitionStart = getCompetitionStart();
             <div class="form-actions-row">
               <button type="submit" class="primary-btn">Save Settings</button>
               <button id="clear-start-btn" type="button" class="secondary-btn">Clear Date</button>
+              <button id="start-now-btn" type="button" class="secondary-btn">Start Now</button>
             </div>
           </form>
           <div id="settings-status" class="settings-current">
@@ -120,6 +121,26 @@ const competitionStart = getCompetitionStart();
           }
         } else {
           showStatus(data.error || 'Failed to clear settings', true);
+        }
+      });
+
+      document.getElementById('start-now-btn')?.addEventListener('click', async () => {
+        const now = new Date().toISOString();
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ competition_start: now }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus('Competition started');
+          (document.getElementById('competition-start') as HTMLInputElement).value = now.slice(0, 16);
+          const statusDiv = document.getElementById('settings-status');
+          if (statusDiv) {
+            statusDiv.innerHTML = `<p>Current start: <strong>${new Date(now).toLocaleString('en-GB')}</strong></p>`;
+          }
+        } else {
+          showStatus(data.error || 'Failed to start competition', true);
         }
       });
       </script>

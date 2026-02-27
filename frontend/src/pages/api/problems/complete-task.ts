@@ -1,7 +1,7 @@
 export const prerender = false;
  
 import { getCurrentUser } from "../../../lib/session";
-import { addCompletedTask } from "../../../lib/users";
+import { addCompletedTask, initTaskCompletionsTable } from "../../../lib/users";
  
 export async function POST({ request }: { request: Request }) {
   const user = await getCurrentUser(request);
@@ -23,6 +23,7 @@ export async function POST({ request }: { request: Request }) {
     );
   }
  
+  await initTaskCompletionsTable();
   const added = await addCompletedTask(user.id, problemId);
  
   return new Response(
