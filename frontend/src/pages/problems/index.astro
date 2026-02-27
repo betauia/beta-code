@@ -4,7 +4,12 @@ export const prerender = false;
 import "../../styles/global.css";
 import { initTasksTable, getAllTasks } from "../../lib/tasks";
 import { getCurrentUser } from "../../lib/session";
+import { hasCompetitionStarted } from "../../lib/settings";
 import Header from "../../components/Header.astro";
+
+if (!hasCompetitionStarted()) {
+  return Astro.redirect("/");
+}
  
 const user = await getCurrentUser(Astro.request);
 const completedTasks = user?.completed_tasks || [];

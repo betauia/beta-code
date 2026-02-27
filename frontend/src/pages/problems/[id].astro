@@ -3,6 +3,11 @@ export const prerender = false;
 
 import ProblemLayout from "../../layout/ProblemLayout.astro";
 import { initTasksTable, getTaskById, getTestsForTask } from "../../lib/tasks";
+import { hasCompetitionStarted } from "../../lib/settings";
+ 
+if (!hasCompetitionStarted()) {
+  return Astro.redirect("/");
+}
 
 const { id } = Astro.params;
 if (!id) throw new Error("Missing problem id in route params");

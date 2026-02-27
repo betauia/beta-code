@@ -1,0 +1,365 @@
+---
+export const prerender = false;
+ 
+import "../../styles/global.css";
+import { getCurrentUser } from "../../lib/session";
+import { getAllUsers, type User } from "../../lib/users";
+import { initTasksTable, getAllTasks, type Task } from "../../lib/tasks";
+import Header from "../../components/Header.astro";
+import AdminNav from "../../components/AdminNav.astro";
+ 
+const user = await getCurrentUser(Astro.request);
+ 
+if (!user || !user.is_admin) {
+  return Astro.redirect("/");
+}
+ 
+let users: User[] = [];
+try {
+  users = await getAllUsers();
+} catch (error) {
+  console.warn("Failed to load users", error);
+}
+ 
+let dbTasks: Task[] = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks", error);
+}
+ 
+const pointsById = new Map(dbTasks.map((t) => [String(t.id), t.points]));
+---
+ 
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Players - Admin Panel - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <Header user={user} />
+ 
+    <main class="admin-page">
+      <div class="admin-intro">
+        <h1>Admin Panel</h1>
+        <p class="p-text">Manage players, tasks, and tests.</p>
+      </div>
+ 
+      <div id="status-message" class="status-message" style="display: none;"></div>
+ 
+      <AdminNav active="players" />
+ 
+      <div class="admin-content">
+        {users.length === 0 ? (
+          <div class="admin-empty">
+            <p>No users found</p>
+          </div>
+        ) : (
+          <div class="admin-card">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Points</th>
+                  <th>Completed Tasks</th>
+                  <th>Admin</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((entry) => {
+                  const completed = entry.completed_tasks || [];
+                  const totalPoints = completed.reduce((sum, taskId) => sum + (pointsById.get(taskId) ?? 0), 0);
+                  return (
+                    <tr data-user-id={entry.id} data-username={entry.username}>
+                      <td>{entry.id}</td>
+                      <td>
+                        {entry.username}
+                        {entry.id === user.id && <span class="you-badge">(you)</span>}
+                      </td>
+                      <td class="points-cell">{totalPoints}</td>
+                      <td class="tasks-cell">
+                        <div class="task-tags">
+                          {completed.length === 0 ? (
+                            <span class="no-tasks">None</span>
+                          ) : (
+                            completed.map((taskId) => {
+                              const task = dbTasks.find(t => String(t.id) === taskId);
+                              return (
+                                <span class="task-tag" data-task-id={taskId}>
+                                  {task ? task.name : `#${taskId}`}
+                                  <button
+                                    class="remove-task-btn"
+                                    data-user-id={entry.id}
+                                    data-problem-id={taskId}
+                                    title="Remove this task"
+                                  >&times;</button>
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div class="add-task-row">
+                          <select class="add-task-select" data-user-id={entry.id}>
+                            <option value="">Add task...</option>
+                            {dbTasks
+                              .filter(t => !completed.includes(String(t.id)))
+                              .map(t => (
+                                <option value={String(t.id)}>{t.name} ({t.points}pts)</option>
+                              ))
+                            }
+                          </select>
+                        </div>
+                      </td>
+                      <td>{entry.is_admin ? "Yes" : "No"}</td>
+                      <td>
+                        {entry.id !== user.id && (
+                          <button
+                            class="delete-user-btn"
+                            data-user-id={entry.id}
+                            data-username={entry.username}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </main>
+ 
+    <script>
+      const statusEl = document.getElementById('status-message');
+ 
+      function showStatus(msg: string, isError = false) {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = isError ? 'status-message status-error' : 'status-message status-success';
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+      }
+ 
+      document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const userId = btn.getAttribute('data-user-id');
+          const username = btn.getAttribute('data-username');
+          if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+          const res = await fetch('/api/admin/delete-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: Number(userId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            showStatus(`User "${username}" deleted`);
+            (btn as HTMLElement).closest('tr')?.remove();
+          } else {
+            showStatus(data.error || 'Failed to delete user', true);
+          }
+        });
+      });
+ 
+      document.querySelectorAll('.remove-task-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const userId = btn.getAttribute('data-user-id');
+          const problemId = btn.getAttribute('data-problem-id');
+          const res = await fetch('/api/admin/update-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: Number(userId), problemId, action: 'remove' }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            showStatus('Task removed');
+            window.location.reload();
+          } else {
+            showStatus(data.error || 'Failed to remove task', true);
+          }
+        });
+      });
+ 
+      document.querySelectorAll('.add-task-select').forEach(select => {
+        select.addEventListener('change', async () => {
+          const sel = select as HTMLSelectElement;
+          const userId = sel.getAttribute('data-user-id');
+          const problemId = sel.value;
+          if (!problemId) return;
+          const res = await fetch('/api/admin/update-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: Number(userId), problemId, action: 'add' }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            showStatus('Task added');
+            window.location.reload();
+          } else {
+            showStatus(data.error || 'Failed to add task', true);
+          }
+        });
+      });
+    </script>
+ 
+    <style>
+      .admin-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+        text-align: left;
+      }
+ 
+      .admin-intro h1 {
+        margin-bottom: 8px;
+      }
+ 
+      .status-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+ 
+      .status-success {
+        background: rgba(80, 255, 120, 0.1);
+        border: 1px solid rgba(80, 255, 120, 0.4);
+        color: #6bff6b;
+      }
+ 
+      .status-error {
+        background: rgba(255, 80, 80, 0.1);
+        border: 1px solid rgba(255, 80, 80, 0.4);
+        color: #ff6b6b;
+      }
+ 
+      .admin-content {
+        margin-top: 0;
+      }
+ 
+      .admin-card {
+        background: #111b2b;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        margin-top: 0;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        overflow-x: auto;
+        margin-bottom: 24px;
+      }
+ 
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+ 
+      .admin-table th,
+      .admin-table td {
+        text-align: left;
+        padding: 12px 8px;
+        border-bottom: 1px solid #1f2b43;
+        vertical-align: top;
+      }
+ 
+      .admin-table th {
+        color: var(--small-text);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .you-badge {
+        color: var(--beta-blue);
+        font-size: 0.8rem;
+        margin-left: 6px;
+      }
+ 
+      .task-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+ 
+      .task-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.85rem;
+        color: var(--text-color);
+      }
+ 
+      .remove-task-btn {
+        background: none;
+        border: none;
+        color: #ff6b6b;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0 2px;
+        line-height: 1;
+      }
+ 
+      .remove-task-btn:hover { color: #ff3333; }
+ 
+      .no-tasks {
+        color: var(--small-text);
+        font-size: 0.85rem;
+      }
+ 
+      .add-task-row { margin-top: 6px; }
+ 
+      .add-task-select {
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        color: var(--text-color);
+        padding: 4px 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+ 
+      .add-task-select:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+ 
+      .delete-user-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #ff6b6b;
+        border-radius: 6px;
+        color: #ff6b6b;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .delete-user-btn:hover {
+        background: rgba(255, 80, 80, 0.15);
+      }
+ 
+      .admin-empty {
+        margin-top: 24px;
+        padding: 20px 24px;
+        border-radius: 12px;
+        background: rgba(255, 174, 0, 0.08);
+        border: 1px solid rgba(255, 174, 0, 0.25);
+        color: var(--small-text);
+      }
+    </style>
+  </body>
+</html>

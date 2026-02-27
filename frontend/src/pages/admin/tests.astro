@@ -1,0 +1,509 @@
+---
+export const prerender = false;
+ 
+import "../../styles/global.css";
+import { getCurrentUser } from "../../lib/session";
+import { initTasksTable, getAllTasks, type Task } from "../../lib/tasks";
+import Header from "../../components/Header.astro";
+import AdminNav from "../../components/AdminNav.astro";
+ 
+const user = await getCurrentUser(Astro.request);
+ 
+if (!user || !user.is_admin) {
+  return Astro.redirect("/");
+}
+ 
+let dbTasks: Task[] = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks", error);
+}
+---
+ 
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Tests - Admin Panel - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <Header user={user} />
+ 
+    <main class="admin-page">
+      <div class="admin-intro">
+        <h1>Admin Panel</h1>
+        <p class="p-text">Manage players, tasks, and tests.</p>
+      </div>
+ 
+      <div id="status-message" class="status-message" style="display: none;"></div>
+ 
+      <AdminNav active="tests" />
+ 
+      <div class="admin-content">
+        <div class="admin-card">
+          <h2 id="test-form-title" class="section-title">Create Test</h2>
+          <form id="create-test-form" class="admin-form">
+            <div class="form-row">
+              <label for="test-task">Assign to Task</label>
+              <select id="test-task" required>
+                <option value="">Select a task...</option>
+                {dbTasks.map(t => (
+                  <option value={t.id}>#{t.id} — {t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="test-name">Test Name</label>
+              <input id="test-name" type="text" placeholder="e.g. sample1, hidden1" required />
+            </div>
+            <div class="form-row">
+              <label for="test-input">Input (stdin)</label>
+              <textarea id="test-input" rows="4" placeholder="Input fed to the program via stdin"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="test-expected">Expected Output</label>
+              <textarea id="test-expected" rows="4" placeholder="Expected stdout output"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="test-file-name">Data File Name (optional)</label>
+              <input id="test-file-name" type="text" placeholder="e.g. data.json or data.csv" />
+            </div>
+            <div class="form-row">
+              <label for="test-file-content">Data File Content (optional)</label>
+              <textarea id="test-file-content" rows="6" placeholder="Content of the data file (if applicable)"></textarea>
+            </div>
+            <div class="form-row form-row-checkbox">
+              <label>
+                <input id="test-hidden" type="checkbox" />
+                Hidden test (output not shown to users)
+              </label>
+            </div>
+            <div class="form-actions-row">
+              <button id="test-submit-btn" type="submit" class="primary-btn">Add Test</button>
+              <button id="test-cancel-edit-btn" type="button" class="secondary-btn" style="display:none;">Cancel Edit</button>
+            </div>
+          </form>
+        </div>
+ 
+        <div class="admin-card">
+          <h2 class="section-title">View Tests for Task</h2>
+          <div class="form-row">
+            <select id="view-tests-task">
+              <option value="">Select a task...</option>
+              {dbTasks.map(t => (
+                <option value={t.id}>#{t.id} — {t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div id="tests-list" style="margin-top: 16px;">
+            <p class="no-tasks-msg">Select a task above to view its tests.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+ 
+    <script>
+      const statusEl = document.getElementById('status-message');
+ 
+      function showStatus(msg: string, isError = false) {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = isError ? 'status-message status-error' : 'status-message status-success';
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+      }
+ 
+      function escHtml(str: unknown): string {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+ 
+      function unescHtml(str: unknown): string {
+        return String(str ?? '')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, '&');
+      }
+ 
+      let editingTestId: number | null = null;
+ 
+      function resetTestFormMode() {
+        editingTestId = null;
+        const title = document.getElementById('test-form-title');
+        const submit = document.getElementById('test-submit-btn');
+        const cancel = document.getElementById('test-cancel-edit-btn');
+        if (title) title.textContent = 'Create Test';
+        if (submit) submit.textContent = 'Add Test';
+        if (cancel) (cancel as HTMLElement).style.display = 'none';
+      }
+ 
+      function setTestFormModeForEdit(testId: number) {
+        editingTestId = testId;
+        const title = document.getElementById('test-form-title');
+        const submit = document.getElementById('test-submit-btn');
+        const cancel = document.getElementById('test-cancel-edit-btn');
+        if (title) title.textContent = `Edit Test #${testId}`;
+        if (submit) submit.textContent = 'Update Test';
+        if (cancel) (cancel as HTMLElement).style.display = 'inline-block';
+      }
+ 
+      const createTestForm = document.getElementById('create-test-form');
+      createTestForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const task_id = Number((document.getElementById('test-task') as HTMLSelectElement)?.value);
+        const name = (document.getElementById('test-name') as HTMLInputElement)?.value.trim() ?? '';
+        const input = (document.getElementById('test-input') as HTMLTextAreaElement)?.value ?? '';
+        const expected_output = (document.getElementById('test-expected') as HTMLTextAreaElement)?.value ?? '';
+        const is_hidden = (document.getElementById('test-hidden') as HTMLInputElement)?.checked ?? false;
+        const data_file_name = (document.getElementById('test-file-name') as HTMLInputElement)?.value.trim() || null;
+        const data_file_content = (document.getElementById('test-file-content') as HTMLTextAreaElement)?.value || null;
+ 
+        if (!task_id) { showStatus('Please select a task', true); return; }
+        if (!name) { showStatus('Test name is required', true); return; }
+ 
+        const isEditing = editingTestId !== null;
+        const res = await fetch('/api/admin/tests', {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingTestId, task_id, name, input, expected_output, is_hidden, data_file_name, data_file_content }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus(isEditing ? `Test "${name}" updated` : `Test "${name}" added to task #${task_id}`);
+          (createTestForm as HTMLFormElement).reset();
+          resetTestFormMode();
+          const viewSel = document.getElementById('view-tests-task') as HTMLSelectElement | null;
+          if (viewSel && Number(viewSel.value) === task_id) {
+            loadTestsForTask(task_id);
+          }
+        } else {
+          showStatus(data.error || 'Failed to add test', true);
+        }
+      });
+ 
+      document.getElementById('test-cancel-edit-btn')?.addEventListener('click', () => {
+        (createTestForm as HTMLFormElement | null)?.reset();
+        resetTestFormMode();
+      });
+ 
+      async function loadTestsForTask(taskId: number) {
+        const container = document.getElementById('tests-list');
+        if (!container) return;
+        container.innerHTML = '<p class="no-tasks-msg">Loading...</p>';
+        const res = await fetch(`/api/admin/tests?taskId=${taskId}`);
+        const tests = await res.json();
+        if (!Array.isArray(tests) || tests.length === 0) {
+          container.innerHTML = '<p class="no-tasks-msg">No tests for this task yet.</p>';
+          return;
+        }
+        container.innerHTML = `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Hidden</th>
+                <th>Input</th>
+                <th>Expected Output</th>
+                <th>Data File</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tests.map(t => `
+                <tr data-test-id="${escHtml(t.id)}" data-test-name="${escHtml(t.name)}" data-test-input="${escHtml(t.input)}" data-test-expected="${escHtml(t.expected_output)}" data-test-hidden="${t.is_hidden ? '1' : '0'}" data-test-file-name="${escHtml(t.data_file_name || '')}" data-test-file-content="${escHtml(t.data_file_content || '')}">
+                  <td>${escHtml(t.id)}</td>
+                  <td>${escHtml(t.name)}</td>
+                  <td>${t.is_hidden ? 'Yes' : 'No'}</td>
+                  <td><pre class="test-preview">${escHtml(t.input)}</pre></td>
+                  <td><pre class="test-preview">${escHtml(t.expected_output)}</pre></td>
+                  <td>${t.data_file_name ? escHtml(t.data_file_name) : '—'}</td>
+                  <td><button class="edit-test-btn" data-test-id="${escHtml(t.id)}">Edit</button> <button class="delete-test-btn" data-test-id="${escHtml(t.id)}">Delete</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        container.querySelectorAll('.edit-test-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const testId = Number(btn.getAttribute('data-test-id'));
+            const row = (btn as HTMLElement).closest('tr') as HTMLElement | null;
+            if (!row) return;
+ 
+            (document.getElementById('test-task') as HTMLSelectElement).value = String(taskId);
+            (document.getElementById('test-name') as HTMLInputElement).value = unescHtml(row.dataset.testName || '');
+            (document.getElementById('test-input') as HTMLTextAreaElement).value = unescHtml(row.dataset.testInput || '');
+            (document.getElementById('test-expected') as HTMLTextAreaElement).value = unescHtml(row.dataset.testExpected || '');
+            (document.getElementById('test-hidden') as HTMLInputElement).checked = row.dataset.testHidden === '1';
+            (document.getElementById('test-file-name') as HTMLInputElement).value = unescHtml(row.dataset.testFileName || '');
+            (document.getElementById('test-file-content') as HTMLTextAreaElement).value = unescHtml(row.dataset.testFileContent || '');
+ 
+            setTestFormModeForEdit(testId);
+            (createTestForm as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        });
+ 
+        container.querySelectorAll('.delete-test-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const testId = Number(btn.getAttribute('data-test-id'));
+            if (!confirm(`Delete test #${testId}?`)) return;
+            const res = await fetch('/api/admin/tests', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: testId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              showStatus(`Test #${testId} deleted`);
+              (btn as HTMLElement).closest('tr')?.remove();
+            } else {
+              showStatus(data.error || 'Failed to delete test', true);
+            }
+          });
+        });
+      }
+ 
+      document.getElementById('view-tests-task')?.addEventListener('change', (e) => {
+        const taskId = Number((e.target as HTMLSelectElement).value);
+        if (!taskId) {
+          const testsList = document.getElementById('tests-list');
+          if (testsList) testsList.innerHTML = '<p class="no-tasks-msg">Select a task above to view its tests.</p>';
+          return;
+        }
+        loadTestsForTask(taskId);
+      });
+    </script>
+ 
+    <style>
+      .admin-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+        text-align: left;
+      }
+ 
+      .admin-intro h1 {
+        margin-bottom: 8px;
+      }
+ 
+      .status-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+ 
+      .status-success {
+        background: rgba(80, 255, 120, 0.1);
+        border: 1px solid rgba(80, 255, 120, 0.4);
+        color: #6bff6b;
+      }
+ 
+      .status-error {
+        background: rgba(255, 80, 80, 0.1);
+        border: 1px solid rgba(255, 80, 80, 0.4);
+        color: #ff6b6b;
+      }
+ 
+      .admin-content {
+        margin-top: 0;
+      }
+ 
+      .admin-card {
+        background: #111b2b;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        margin-top: 0;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        overflow-x: auto;
+        margin-bottom: 24px;
+      }
+ 
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 20px;
+        color: var(--text-color);
+      }
+ 
+      .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+ 
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+ 
+      .form-row label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--small-text);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .form-row input,
+      .form-row textarea,
+      .form-row select {
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        color: var(--text-color);
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        width: 100%;
+        box-sizing: border-box;
+      }
+ 
+      .form-row textarea {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.82rem;
+        resize: vertical;
+      }
+ 
+      .form-row input:focus,
+      .form-row textarea:focus,
+      .form-row select:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+ 
+      .form-row-checkbox {
+        flex-direction: row;
+        align-items: center;
+      }
+ 
+      .form-row-checkbox label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+ 
+      .form-actions-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+ 
+      .primary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: var(--beta-blue, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: opacity 0.2s;
+      }
+ 
+      .secondary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+ 
+      .primary-btn:hover {
+        opacity: 0.85;
+      }
+ 
+      .no-tasks-msg {
+        color: var(--small-text);
+        font-size: 0.9rem;
+        margin: 0;
+      }
+ 
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+ 
+      .admin-table th,
+      .admin-table td {
+        text-align: left;
+        padding: 12px 8px;
+        border-bottom: 1px solid #1f2b43;
+        vertical-align: top;
+      }
+ 
+      .admin-table th {
+        color: var(--small-text);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .edit-test-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid var(--beta-blue, #2563eb);
+        border-radius: 6px;
+        color: var(--beta-blue, #2563eb);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .edit-test-btn:hover {
+        background: rgba(37, 99, 235, 0.15);
+      }
+ 
+      .delete-test-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #ff6b6b;
+        border-radius: 6px;
+        color: #ff6b6b;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .delete-test-btn:hover {
+        background: rgba(255, 80, 80, 0.15);
+      }
+ 
+      .test-preview {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.78rem;
+        margin: 0;
+        white-space: pre-wrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #aaa;
+      }
+    </style>
+  </body>
+</html>

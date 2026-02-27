@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+
+import "../styles/global.css";
+import { getCurrentUser } from "../../lib/session";
+
+const user = await getCurrentUser(Astro.request);
+
+// Redirect non-admin users
+if (!user || !user.is_admin) {
+  return Astro.redirect("/");
+}
+
+return Astro.redirect("/admin/players");
+---
