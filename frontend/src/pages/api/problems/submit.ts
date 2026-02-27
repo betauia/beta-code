@@ -2,6 +2,7 @@ export const prerender = false;
 
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { hasCompetitionStarted } from "../../../lib/settings";
 
 const REDIS_URL = import.meta.env.REDIS_URL || process.env.REDIS_URL;
 if (!REDIS_URL) throw new Error("Missing REDIS_URL");
@@ -10,6 +11,12 @@ const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 const queue = new Queue("submissions", { connection });
 
 export async function POST({ request }: { request: Request }) {
+  if (!hasCompetitionStarted()) {
+    return new Response(JSON.stringify({ error: "Competition has not started yet" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const body = await request.json().catch(() => ({}));
   const code = String(body?.code ?? "");
   const problemId = String(body?.problemId ?? "");

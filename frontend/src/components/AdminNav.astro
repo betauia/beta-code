@@ -1,0 +1,51 @@
+---
+interface Props {
+  active: "players" | "tasks" | "tests" | "settings";
+}
+ 
+const { active } = Astro.props;
+---
+ 
+<div class="admin-nav">
+  <a href="/admin/players" class:list={["admin-nav-link", { active: active === "players" }]}>Players</a>
+  <a href="/admin/tasks" class:list={["admin-nav-link", { active: active === "tasks" }]}>Tasks</a>
+  <a href="/admin/tests" class:list={["admin-nav-link", { active: active === "tests" }]}>Tests</a>
+  <a href="/admin/settings" class:list={["admin-nav-link", { active: active === "settings" }]}>Settings</a>
+</div>
+ 
+<style>
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0 0;
+    border-bottom: 1px solid #1f2b43;
+    padding-bottom: 0;
+  }
+ 
+  .admin-nav-link {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid #1f2b43;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--small-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+ 
+  .admin-nav-link:hover {
+    color: var(--text-color);
+    background: rgba(255,255,255,0.03);
+  }
+ 
+  .admin-nav-link.active {
+    color: var(--beta-blue);
+    border-color: #1f2b43;
+    background: #111b2b;
+    border-bottom: 1px solid #111b2b;
+    margin-bottom: -1px;
+  }
+</style>

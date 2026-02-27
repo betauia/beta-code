@@ -1,0 +1,313 @@
+---
+export const prerender = false;
+ 
+import "../../styles/global.css";
+import { getCurrentUser } from "../../lib/session";
+import { getCompetitionStart } from "../../lib/settings";
+import Header from "../../components/Header.astro";
+import AdminNav from "../../components/AdminNav.astro";
+ 
+const user = await getCurrentUser(Astro.request);
+ 
+if (!user || !user.is_admin) {
+  return Astro.redirect("/");
+}
+
+const competitionStart = getCompetitionStart();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Tasks - Admin Panel - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <Header user={user} />
+ 
+    <main class="admin-page">
+      <div class="admin-intro">
+        <h1>Admin Panel</h1>
+        <p class="p-text">Manage players, tasks, and tests.</p>
+      </div>
+ 
+      <div id="status-message" class="status-message" style="display: none;"></div>
+ 
+      <AdminNav active="tasks" />
+      <div id="tab-settings" class="tab-content">
+        <div class="admin-card">
+          <h2 class="section-title">Competition Settings</h2>
+          <form id="settings-form" class="admin-form">
+            <div class="form-row">
+              <label for="competition-start">Competition Start Time</label>
+              <input
+                id="competition-start"
+                type="datetime-local"
+                value={competitionStart ? new Date(competitionStart).toISOString().slice(0, 16) : ""}
+              />
+              <p class="settings-hint">Set the date and time when tasks become available. The front page will show a countdown to this time.</p>
+            </div>
+            <div class="form-actions-row">
+              <button type="submit" class="primary-btn">Save Settings</button>
+              <button id="clear-start-btn" type="button" class="secondary-btn">Clear Date</button>
+            </div>
+          </form>
+          <div id="settings-status" class="settings-current">
+            {competitionStart
+              ? <p>Current start: <strong>{new Date(competitionStart).toLocaleString("en-GB")}</strong></p>
+              : <p>No competition start time set. The countdown will show "TBA".</p>
+            }
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const statusEl = document.getElementById('status-message');
+        
+      function showStatus(msg: string, isError = false) {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = isError ? 'status-message status-error' : 'status-message status-success';
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+      }
+        
+        // ---- Settings tab ----
+      const settingsForm = document.getElementById('settings-form');
+      settingsForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('competition-start') as HTMLInputElement;
+        const value = input.value;
+        const competition_start = value ? new Date(value).toISOString() : null;
+ 
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ competition_start }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus('Competition start time saved');
+          const statusDiv = document.getElementById('settings-status');
+          if (statusDiv) {
+            statusDiv.innerHTML = competition_start
+              ? `<p>Current start: <strong>${new Date(competition_start).toLocaleString('en-GB')}</strong></p>`
+              : '<p>No competition start time set. The countdown will show "TBA".</p>';
+          }
+        } else {
+          showStatus(data.error || 'Failed to save settings', true);
+        }
+      });
+ 
+      document.getElementById('clear-start-btn')?.addEventListener('click', async () => {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ competition_start: null }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus('Competition start time cleared');
+          (document.getElementById('competition-start') as HTMLInputElement).value = '';
+          const statusDiv = document.getElementById('settings-status');
+          if (statusDiv) {
+            statusDiv.innerHTML = '<p>No competition start time set. The countdown will show "TBA".</p>';
+          }
+        } else {
+          showStatus(data.error || 'Failed to clear settings', true);
+        }
+      });
+      </script>
+      <style>
+      .admin-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+        text-align: left;
+      }
+ 
+      .admin-intro h1 {
+        margin-bottom: 8px;
+      }
+ 
+      .status-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+ 
+      .status-success {
+        background: rgba(80, 255, 120, 0.1);
+        border: 1px solid rgba(80, 255, 120, 0.4);
+        color: #6bff6b;
+      }
+ 
+      .status-error {
+        background: rgba(255, 80, 80, 0.1);
+        border: 1px solid rgba(255, 80, 80, 0.4);
+        color: #ff6b6b;
+      }
+ 
+      .admin-content {
+        margin-top: 0;
+      }
+ 
+      .admin-card {
+        background: #111b2b;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        margin-top: 0;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        overflow-x: auto;
+        margin-bottom: 24px;
+      }
+ 
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 20px;
+        color: var(--text-color);
+      }
+ 
+      .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+ 
+      .primary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: var(--beta-blue, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: opacity 0.2s;
+      }
+ 
+      .secondary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+ 
+      .primary-btn:hover {
+        opacity: 0.85;
+      }
+ 
+      .no-tasks-msg {
+        color: var(--small-text);
+        font-size: 0.9rem;
+        margin: 0;
+      }
+ 
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+ 
+      .admin-table th,
+      .admin-table td {
+        text-align: left;
+        padding: 12px 8px;
+        border-bottom: 1px solid #1f2b43;
+        vertical-align: top;
+      }
+ 
+      .admin-table th {
+        color: var(--small-text);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .type-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+ 
+      .solve-badge {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+ 
+      .fix-badge {
+        background: rgba(230, 126, 34, 0.15);
+        color: #e67e22;
+        border: 1px solid rgba(230, 126, 34, 0.3);
+      }
+ 
+      .edit-task-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid var(--beta-blue, #2563eb);
+        border-radius: 6px;
+        color: var(--beta-blue, #2563eb);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .edit-task-btn:hover {
+        background: rgba(37, 99, 235, 0.15);
+      }
+ 
+      .delete-task-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #ff6b6b;
+        border-radius: 6px;
+        color: #ff6b6b;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .delete-task-btn:hover {
+        background: rgba(255, 80, 80, 0.15);
+      }
+      
+      .settings-hint {
+        margin: 4px 0 0;
+        font-size: 0.8rem;
+        color: var(--small-text);
+      }
+ 
+      .settings-current {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: #0c1420;
+        border: 1px solid #1f2b43;
+        color: var(--small-text);
+        font-size: 0.9rem;
+      }
+ 
+      .settings-current strong {
+        color: var(--beta-blue);
+      }
+    </style>
+    </body>
+</html>

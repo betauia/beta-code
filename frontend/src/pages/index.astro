@@ -4,9 +4,11 @@ export const prerender = false;
 import "../styles/global.css";
 import Footer from "../components/footer.astro";
 import { getCurrentUser } from "../lib/session";
+import { getCompetitionStart } from "../lib/settings";
 import Header from "../components/Header.astro";
  
 const user = await getCurrentUser(Astro.request);
+const competitionStart = getCompetitionStart();
 ---
  
 <html lang="en">
@@ -22,20 +24,167 @@ const user = await getCurrentUser(Astro.request);
 	<body>
 		<Header user={user} />
 		<h1 class="center-page">Competition starts in:</h1>
-		<h1></h1>
-		<p class="p-text"> unknown time comming soon</p>
-		
+		<div class="countdown-wrapper">
+			<h1 class="countdown-title">Competition starts in:</h1>
+ 
+			<div id="countdown" class="countdown-display">
+				<div class="countdown-unit">
+					<span id="cd-days" class="countdown-value">--</span>
+					<span class="countdown-label">Days</span>
+				</div>
+				<span class="countdown-separator">:</span>
+				<div class="countdown-unit">
+					<span id="cd-hours" class="countdown-value">--</span>
+					<span class="countdown-label">Hours</span>
+				</div>
+				<span class="countdown-separator">:</span>
+				<div class="countdown-unit">
+					<span id="cd-minutes" class="countdown-value">--</span>
+					<span class="countdown-label">Minutes</span>
+				</div>
+				<span class="countdown-separator">:</span>
+				<div class="countdown-unit">
+					<span id="cd-seconds" class="countdown-value">--</span>
+					<span class="countdown-label">Seconds</span>
+				</div>
+			</div>
+ 
+			<p id="cd-message" class="countdown-message"></p>
+		</div>
 		
 		<Footer />
 	</body>
 	
-		<script>
-			const logoutBtn = document.getElementById('logoutBtn');
-			if (logoutBtn) {
-				logoutBtn.addEventListener('click', async () => {
-					await fetch('/api/user/logout', { method: 'POST' });
-					window.location.reload();
-				});
+	<script define:vars={{ competitionStart }}>
+		function pad(n) {
+			return String(n).padStart(2, '0');
+		}
+ 
+		function updateCountdown() {
+			const daysEl = document.getElementById('cd-days');
+			const hoursEl = document.getElementById('cd-hours');
+			const minutesEl = document.getElementById('cd-minutes');
+			const secondsEl = document.getElementById('cd-seconds');
+			const messageEl = document.getElementById('cd-message');
+ 
+			if (!competitionStart) {
+				daysEl.textContent = '--';
+				hoursEl.textContent = '--';
+				minutesEl.textContent = '--';
+				secondsEl.textContent = '--';
+				messageEl.textContent = 'Start time TBA';
+				return;
 			}
-		</script>
+			const target = new Date(competitionStart).getTime();
+			const now = Date.now();
+			const diff = target - now;
+ 
+			if (diff <= 0) {
+				daysEl.textContent = '00';
+				hoursEl.textContent = '00';
+				minutesEl.textContent = '00';
+				secondsEl.textContent = '00';
+				messageEl.textContent = 'The competition is live!';
+				messageEl.classList.add('live');
+				return;
+			}
+ 
+			const totalSeconds = Math.floor(diff / 1000);
+			const days = Math.floor(totalSeconds / 86400);
+			const hours = Math.floor((totalSeconds % 86400) / 3600);
+			const minutes = Math.floor((totalSeconds % 3600) / 60);
+			const seconds = totalSeconds % 60;
+ 
+			daysEl.textContent = pad(days);
+			hoursEl.textContent = pad(hours);
+			minutesEl.textContent = pad(minutes);
+			secondsEl.textContent = pad(seconds);
+			messageEl.textContent = '';
+			messageEl.classList.remove('live');
+		}
+ 
+		updateCountdown();
+		setInterval(updateCountdown, 1000);
+	</script>
+	<script>
+	const logoutBtn = document.getElementById('logoutBtn');
+		if (logoutBtn) {
+			logoutBtn.addEventListener('click', async () => {
+				await fetch('/api/user/logout', { method: 'POST' });
+				window.location.reload();
+			});
+		}
+	</script>
+	<style>
+		.countdown-wrapper {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 80px 16px 40px;
+		}
+ 
+		.countdown-title {
+			font-size: 1.4rem;
+			font-weight: 600;
+			color: var(--small-text);
+			margin: 0 0 40px;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+ 
+		.countdown-display {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+ 
+		.countdown-unit {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			background: #111b2b;
+			border: 1px solid #1f2b43;
+			border-radius: 12px;
+			padding: 20px 24px;
+			min-width: 90px;
+		}
+ 
+		.countdown-value {
+			font-family: "Orbitron", sans-serif;
+			font-size: 2.8rem;
+			font-weight: 700;
+			color: var(--beta-blue);
+			line-height: 1;
+		}
+ 
+		.countdown-label {
+			font-size: 0.75rem;
+			font-weight: 600;
+			color: var(--small-text);
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			margin-top: 8px;
+		}
+ 
+		.countdown-separator {
+			font-family: "Orbitron", sans-serif;
+			font-size: 2.4rem;
+			font-weight: 700;
+			color: var(--small-text);
+			padding-bottom: 20px;
+		}
+ 
+		.countdown-message {
+			margin-top: 24px;
+			font-size: 1rem;
+			color: var(--small-text);
+			min-height: 1.5em;
+		}
+ 
+		.countdown-message.live {
+			color: #2ecc71;
+			font-weight: 700;
+		}
+	</style>
 </html>

@@ -1,0 +1,508 @@
+---
+export const prerender = false;
+ 
+import "../../styles/global.css";
+import { getCurrentUser } from "../../lib/session";
+import { initTasksTable, getAllTasks, type Task } from "../../lib/tasks";
+import Header from "../../components/Header.astro";
+import AdminNav from "../../components/AdminNav.astro";
+ 
+const user = await getCurrentUser(Astro.request);
+ 
+if (!user || !user.is_admin) {
+  return Astro.redirect("/");
+}
+ 
+let dbTasks: Task[] = [];
+try {
+  await initTasksTable();
+  dbTasks = await getAllTasks();
+} catch (error) {
+  console.warn("Failed to load tasks", error);
+}
+---
+ 
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Tasks - Admin Panel - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <Header user={user} />
+ 
+    <main class="admin-page">
+      <div class="admin-intro">
+        <h1>Admin Panel</h1>
+        <p class="p-text">Manage players, tasks, and tests.</p>
+      </div>
+ 
+      <div id="status-message" class="status-message" style="display: none;"></div>
+ 
+      <AdminNav active="tasks" />
+ 
+      <div class="admin-content">
+        <div class="admin-card">
+          <h2 id="task-form-title" class="section-title">Create Task</h2>
+          <form id="create-task-form" class="admin-form">
+            <div class="form-row">
+              <label for="task-name">Name</label>
+              <input id="task-name" type="text" placeholder="Task name" required />
+            </div>
+            <div class="form-row">
+              <label for="task-desc">Description</label>
+              <textarea id="task-desc" rows="4" placeholder="Task description / problem statement"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="task-code">Code Preview (starter code)</label>
+              <textarea id="task-code" rows="8" placeholder="#include <iostream>&#10;using namespace std;&#10;&#10;int main() {&#10;    // ...&#10;}"></textarea>
+            </div>
+            <div class="form-row form-row-inline">
+              <div>
+                <label for="task-points">Points</label>
+                <input id="task-points" type="number" value="50" min="1" max="1000" />
+              </div>
+              <div>
+                <label for="task-type">Type</label>
+                <select id="task-type">
+                  <option value="solve">Solve</option>
+                  <option value="fix">Bug Fix</option>
+                </select>
+              </div>
+              <div>
+                <label for="task-difficulty">Difficulty</label>
+                <select id="task-difficulty">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions-row">
+              <button id="task-submit-btn" type="submit" class="primary-btn">Create Task</button>
+              <button id="task-cancel-edit-btn" type="button" class="secondary-btn" style="display:none;">Cancel Edit</button>
+            </div>
+          </form>
+        </div>
+ 
+        <div class="admin-card">
+          <h2 class="section-title">Existing Tasks</h2>
+          <div id="tasks-list">
+            {dbTasks.length === 0 ? (
+              <p class="no-tasks-msg">No tasks yet. Create one above.</p>
+            ) : (
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Difficulty</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tasks-tbody">
+                  {dbTasks.map(t => (
+                    <tr data-task-id={t.id}>
+                      <td>{t.id}</td>
+                      <td>{t.name}</td>
+                      <td><span class={`type-badge ${t.type === 'fix' ? 'fix-badge' : 'solve-badge'}`}>{t.type === 'fix' ? 'Bug Fix' : 'Solve'}</span></td>
+                      <td>{t.difficulty}</td>
+                      <td>{t.points}</td>
+                      <td>
+                        <button class="edit-task-btn" data-task-id={t.id}>Edit</button>
+                        <button class="delete-task-btn" data-task-id={t.id}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+ 
+    <script>
+      const statusEl = document.getElementById('status-message');
+ 
+      function showStatus(msg: string, isError = false) {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = isError ? 'status-message status-error' : 'status-message status-success';
+        statusEl.style.display = 'block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+      }
+ 
+      function escHtml(str: unknown): string {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+ 
+      let editingTaskId: number | null = null;
+ 
+      function resetTaskFormMode() {
+        editingTaskId = null;
+        const title = document.getElementById('task-form-title');
+        const submit = document.getElementById('task-submit-btn');
+        const cancel = document.getElementById('task-cancel-edit-btn');
+        if (title) title.textContent = 'Create Task';
+        if (submit) submit.textContent = 'Create Task';
+        if (cancel) (cancel as HTMLElement).style.display = 'none';
+      }
+ 
+      function setTaskFormModeForEdit(taskId: number) {
+        editingTaskId = taskId;
+        const title = document.getElementById('task-form-title');
+        const submit = document.getElementById('task-submit-btn');
+        const cancel = document.getElementById('task-cancel-edit-btn');
+        if (title) title.textContent = `Edit Task #${taskId}`;
+        if (submit) submit.textContent = 'Update Task';
+        if (cancel) (cancel as HTMLElement).style.display = 'inline-block';
+      }
+ 
+      const createTaskForm = document.getElementById('create-task-form');
+      createTaskForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = (document.getElementById('task-name') as HTMLInputElement)?.value.trim() ?? '';
+        const description = (document.getElementById('task-desc') as HTMLTextAreaElement)?.value.trim() ?? '';
+        const code_preview = (document.getElementById('task-code') as HTMLTextAreaElement)?.value ?? '';
+        const points = Number((document.getElementById('task-points') as HTMLInputElement)?.value);
+        const type = (document.getElementById('task-type') as HTMLSelectElement)?.value ?? 'solve';
+        const difficulty = (document.getElementById('task-difficulty') as HTMLSelectElement)?.value ?? 'Easy';
+ 
+        const isEditing = editingTaskId !== null;
+        const res = await fetch('/api/admin/tasks', {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingTaskId, name, description, code_preview, points, type, difficulty }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showStatus(isEditing ? `Task "${data.name}" updated` : `Task "${data.name}" created (ID: ${data.id})`);
+          (createTaskForm as HTMLFormElement).reset();
+          if (isEditing) {
+            window.location.reload();
+          } else {
+            addTaskRow(data);
+          }
+          resetTaskFormMode();
+        } else {
+          showStatus(data.error || 'Failed to create task', true);
+        }
+      });
+ 
+      document.getElementById('task-cancel-edit-btn')?.addEventListener('click', () => {
+        (createTaskForm as HTMLFormElement | null)?.reset();
+        resetTaskFormMode();
+      });
+ 
+      function addTaskRow(task: { id: string | number; name: string; type: string; difficulty: string; points: number }) {
+        const tbody = document.getElementById('tasks-tbody');
+        if (!tbody) {
+          window.location.reload();
+          return;
+        }
+        const typeBadge = task.type === 'fix'
+          ? '<span class="type-badge fix-badge">Bug Fix</span>'
+          : '<span class="type-badge solve-badge">Solve</span>';
+        const tr = document.createElement('tr');
+        tr.dataset.taskId = String(task.id);
+        tr.innerHTML = `
+          <td>${escHtml(task.id)}</td>
+          <td>${escHtml(task.name)}</td>
+          <td>${typeBadge}</td>
+          <td>${escHtml(task.difficulty)}</td>
+          <td>${escHtml(task.points)}</td>
+          <td><button class="edit-task-btn" data-task-id="${escHtml(task.id)}">Edit</button> <button class="delete-task-btn" data-task-id="${escHtml(task.id)}">Delete</button></td>
+        `;
+        tr.querySelector('.delete-task-btn')?.addEventListener('click', handleDeleteTask);
+        tr.querySelector('.edit-task-btn')?.addEventListener('click', handleEditTask);
+        tbody.appendChild(tr);
+      }
+ 
+      async function handleEditTask(e: Event) {
+        const btn = e.currentTarget as HTMLElement;
+        const taskId = Number(btn.getAttribute('data-task-id'));
+        const allTasksRes = await fetch('/api/admin/tasks');
+        const allTasks = await allTasksRes.json();
+        const existing = Array.isArray(allTasks) ? allTasks.find((t: { id: number }) => t.id === taskId) : null;
+        if (!existing) {
+          showStatus('Task not found', true);
+          return;
+        }
+ 
+        (document.getElementById('task-name') as HTMLInputElement).value = existing.name || '';
+        (document.getElementById('task-desc') as HTMLTextAreaElement).value = existing.description || '';
+        (document.getElementById('task-code') as HTMLTextAreaElement).value = existing.code_preview || '';
+        (document.getElementById('task-points') as HTMLInputElement).value = String(existing.points ?? 50);
+        (document.getElementById('task-type') as HTMLSelectElement).value = existing.type === 'fix' ? 'fix' : 'solve';
+        (document.getElementById('task-difficulty') as HTMLSelectElement).value = ['Easy', 'Medium', 'Hard'].includes(existing.difficulty) ? existing.difficulty : 'Easy';
+        setTaskFormModeForEdit(taskId);
+        (createTaskForm as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+ 
+      async function handleDeleteTask(e: Event) {
+        const btn = e.currentTarget as HTMLElement;
+        const taskId = Number(btn.getAttribute('data-task-id'));
+        if (!confirm(`Delete task #${taskId} and all its tests? This cannot be undone.`)) return;
+        const res = await fetch('/api/admin/tasks', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus(`Task #${taskId} deleted`);
+          btn.closest('tr')?.remove();
+        } else {
+          showStatus(data.error || 'Failed to delete task', true);
+        }
+      }
+ 
+      document.querySelectorAll('.delete-task-btn').forEach(btn => {
+        btn.addEventListener('click', handleDeleteTask);
+      });
+      document.querySelectorAll('.edit-task-btn').forEach(btn => {
+        btn.addEventListener('click', handleEditTask);
+      });
+    </script>
+ 
+    <style>
+      .admin-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+        text-align: left;
+      }
+ 
+      .admin-intro h1 {
+        margin-bottom: 8px;
+      }
+ 
+      .status-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+ 
+      .status-success {
+        background: rgba(80, 255, 120, 0.1);
+        border: 1px solid rgba(80, 255, 120, 0.4);
+        color: #6bff6b;
+      }
+ 
+      .status-error {
+        background: rgba(255, 80, 80, 0.1);
+        border: 1px solid rgba(255, 80, 80, 0.4);
+        color: #ff6b6b;
+      }
+ 
+      .admin-content {
+        margin-top: 0;
+      }
+ 
+      .admin-card {
+        background: #111b2b;
+        border-radius: 0 16px 16px 16px;
+        padding: 24px;
+        margin-top: 0;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        overflow-x: auto;
+        margin-bottom: 24px;
+      }
+ 
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 20px;
+        color: var(--text-color);
+      }
+ 
+      .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+ 
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+ 
+      .form-row label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--small-text);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .form-row input,
+      .form-row textarea,
+      .form-row select {
+        background: #0c1420;
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        color: var(--text-color);
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        width: 100%;
+        box-sizing: border-box;
+      }
+ 
+      .form-row textarea {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.82rem;
+        resize: vertical;
+      }
+ 
+      .form-row input:focus,
+      .form-row textarea:focus,
+      .form-row select:focus {
+        outline: none;
+        border-color: var(--beta-blue);
+      }
+ 
+      .form-row-inline {
+        flex-direction: row;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+ 
+      .form-row-inline > div {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 120px;
+      }
+ 
+      .form-actions-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+ 
+      .primary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: var(--beta-blue, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: opacity 0.2s;
+      }
+ 
+      .secondary-btn {
+        align-self: flex-start;
+        padding: 8px 20px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid #2d3f5f;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+ 
+      .primary-btn:hover {
+        opacity: 0.85;
+      }
+ 
+      .no-tasks-msg {
+        color: var(--small-text);
+        font-size: 0.9rem;
+        margin: 0;
+      }
+ 
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+ 
+      .admin-table th,
+      .admin-table td {
+        text-align: left;
+        padding: 12px 8px;
+        border-bottom: 1px solid #1f2b43;
+        vertical-align: top;
+      }
+ 
+      .admin-table th {
+        color: var(--small-text);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+ 
+      .type-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+ 
+      .solve-badge {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+ 
+      .fix-badge {
+        background: rgba(230, 126, 34, 0.15);
+        color: #e67e22;
+        border: 1px solid rgba(230, 126, 34, 0.3);
+      }
+ 
+      .edit-task-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid var(--beta-blue, #2563eb);
+        border-radius: 6px;
+        color: var(--beta-blue, #2563eb);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .edit-task-btn:hover {
+        background: rgba(37, 99, 235, 0.15);
+      }
+ 
+      .delete-task-btn {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #ff6b6b;
+        border-radius: 6px;
+        color: #ff6b6b;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+      }
+ 
+      .delete-task-btn:hover {
+        background: rgba(255, 80, 80, 0.15);
+      }
+    </style>
+  </body>
+</html>
