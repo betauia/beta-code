@@ -38,6 +38,6 @@ export function setCompetitionStart(dateISO: string | null): void {
 
 export function hasCompetitionStarted(): boolean {
   const start = getCompetitionStart();
-  if (!start) return false;
+  if (!start) return true;
   return Date.now() >= new Date(start).getTime();
 }
