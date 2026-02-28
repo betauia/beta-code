@@ -11,7 +11,10 @@
   "dependencies": {
     "astro": "^5.16.11",
     "bullmq": "^5.67.2",
+    "chart.js": "^4.5.1",
+    "chartjs-adapter-date-fns": "^3.0.0",
     "codemirror": "^6.0.2",
+    "date-fns": "^4.1.0",
     "ioredis": "^5.9.2",
     "pg": "^8.18.0"
   },
