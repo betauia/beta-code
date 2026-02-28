@@ -3,7 +3,7 @@ export const prerender = false;
  
 import "../../styles/global.css";
 import { getCurrentUser } from "../../lib/session";
-import { getCompetitionStart } from "../../lib/settings";
+import { getCompetitionStart , getCompetitionEnd} from "../../lib/settings";
 import Header from "../../components/Header.astro";
 import AdminNav from "../../components/AdminNav.astro";
  
@@ -14,6 +14,7 @@ if (!user || !user.is_admin) {
 }
 
 const competitionStart = getCompetitionStart();
+const competitionEnd = getCompetitionEnd();
 ---
 
 <html lang="en">
