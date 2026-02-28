@@ -6,15 +6,17 @@
 const { refreshMs = 5000 } = Astro.props;
 ---
 
-<div style="width:100%;max-width:1100px">
+<div style="width:100%;max-width:1100px" id="score-graph-wrapper" data-refresh-ms={refreshMs}>
   <canvas id="scoreChart"></canvas>
 </div>
 
-<script type="module">
+<script>
   import Chart from "chart.js/auto";
   import "chartjs-adapter-luxon";
 
-  const refreshMs = ${JSON.stringify(refreshMs)};
+  document.addEventListener("DOMContentLoaded", () => {
+  const wrapper = document.getElementById("score-graph-wrapper");
+  const refreshMs = Number(wrapper?.dataset.refreshMs ?? 5000);
 
   // Stable, “CTF-ish” palette (repeat-safe)
   const palette = [
@@ -41,10 +43,19 @@ const { refreshMs = 5000 } = Astro.props;
     const total = {};
     for (const u of playerUsernames) total[u] = 0;
 
+    // Fall back to actual solve times when competition window isn't configured
+    const solveTimes = sorted.map(c => c.completed_at).filter(Boolean);
+    const effectiveStart = competitionStart
+      ?? solveTimes[0]
+      ?? new Date(Date.now() - 3_600_000).toISOString();
+    const effectiveEnd = competitionEnd
+      ?? solveTimes[solveTimes.length - 1]
+      ?? new Date().toISOString();
+
     // start with an explicit point at start time (so lines begin at 0)
     const series = {};
     for (const u of playerUsernames) {
-      series[u] = [{ x: competitionStart, y: 0 }];
+      series[u] = [{ x: effectiveStart, y: 0 }];
     }
 
     for (const c of sorted) {
@@ -58,12 +69,12 @@ const { refreshMs = 5000 } = Astro.props;
     // Ensure each line reaches the end time (flat line to end)
     for (const u of playerUsernames) {
       const last = series[u][series[u].length - 1];
-      if (!last || last.x !== competitionEnd) {
-        series[u].push({ x: competitionEnd, y: last?.y ?? 0 });
+      if (!last || last.x !== effectiveEnd) {
+        series[u].push({ x: effectiveEnd, y: last?.y ?? 0 });
       }
     }
 
-    return { series, competitionStart, competitionEnd, totals: total };
+    return { series, competitionStart: effectiveStart, competitionEnd: effectiveEnd, totals: total };
   }
 
   const ctx = document.getElementById("scoreChart");
@@ -80,13 +91,13 @@ const { refreshMs = 5000 } = Astro.props;
       },
       plugins: {
         legend: {
-          position: "top",
+          position: "bottom",
           labels: { usePointStyle: true },
           // HTB/pico style: click legend to toggle lines
           onClick(e, item, legend) {
             const idx = item.datasetIndex;
             const meta = legend.chart.getDatasetMeta(idx);
-            meta.hidden = meta.hidden === null ? !legend.chart.data.datasets[idx].hidden : null;
+            meta.hidden = !meta.hidden;
             legend.chart.update();
           },
         },
@@ -113,11 +124,11 @@ const { refreshMs = 5000 } = Astro.props;
             tooltipFormat: "yyyy-LL-dd HH:mm:ss",
             displayFormats: { hour: "HH:mm", minute: "HH:mm" },
           },
-          title: { display: true, text: "Time" },
+          title: { display: true, text: "" },
         },
         y: {
           beginAtZero: true,
-          title: { display: true, text: "Points" },
+          title: { display: true, text: "" },
         },
       },
     },
@@ -157,12 +168,14 @@ const { refreshMs = 5000 } = Astro.props;
     applyData(payload);
   }
 
-  // initial render
-  await fetchAndUpdate();
+  // initial render + polling loop
+  (async () => {
+    await fetchAndUpdate();
 
-  // polling loop
-  const timer = setInterval(fetchAndUpdate, refreshMs);
+    const timer = setInterval(fetchAndUpdate, refreshMs);
 
-  // cleanup if page navigates (Astro view transitions / SPA-style nav)
-  window.addEventListener("beforeunload", () => clearInterval(timer));
+    // cleanup if page navigates (Astro view transitions / SPA-style nav)
+    window.addEventListener("beforeunload", () => clearInterval(timer));
+  })();
+  }); // end DOMContentLoaded
 </script>

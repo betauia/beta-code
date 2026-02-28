@@ -90,13 +90,11 @@ const currentUserIndex = user
       ) : (
         <>
           <div class="graph-section">
+            <h2>Score Progress</h2>
             <div class="graph-card">
-              <canvas id="completionGraph"></canvas>
+              <ScoreGraph refreshMs={5000} />
             </div>
           </div>
-
-          <h2>Score Progress</h2>
-          <ScoreGraph refreshMs={5000} />
 
           {leaderboard.length === 0 ? (
             <div class="leaderboard-empty">
@@ -129,158 +127,6 @@ const currentUserIndex = user
         </>
       )}
     </main>
-
-  <script defer>
-      const CHART_COLORS = [
-        'rgb(0, 133, 254)',
-        'rgb(255, 99, 132)',
-        'rgb(75, 192, 192)',
-        'rgb(255, 205, 86)',
-        'rgb(153, 102, 255)',
-        'rgb(255, 159, 64)',
-        'rgb(54, 162, 235)',
-        'rgb(201, 203, 207)',
-        'rgb(0, 255, 127)',
-        'rgb(255, 105, 180)',
-      ];
-
-      async function buildGraph() {
-        const canvas = document.getElementById('completionGraph');
-        if (!canvas) return;
-
-        const res = await fetch('/api/completions');
-        if (!res.ok) return;
-        const { completions, pointsById, playerUsernames, competitionStart, competitionEnd } = await res.json();
-
-        // Group completions by user
-        const byUser = {};
-        for (const c of completions) {
-          if (!byUser[c.username]) byUser[c.username] = [];
-          byUser[c.username].push({
-            taskId: c.task_id,
-            time: new Date(c.completed_at),
-            points: pointsById[c.task_id] || 0,
-          });
-        }
-
-        const hasCompetitionStart = Boolean(competitionStart);
-        const hasCompetitionEnd = Boolean(competitionEnd);
-        const startMs = hasCompetitionStart ? new Date(competitionStart).getTime() : null;
-        const endMs = hasCompetitionEnd ? new Date(competitionEnd).getTime() : null;
-
-        // Collect all unique timestamps and sort them
-        const allTimes = [...new Set(completions.map(c => new Date(c.completed_at).getTime()))].sort((a, b) => a - b);
-
-        // Show a message when there are no players to chart.
-        if (playerUsernames.length === 0) {
-          const container = document.querySelector('.graph-card');
-          if (container) container.innerHTML = '<p style="color: var(--small-text); text-align: center; padding: 24px;">No players found</p>';
-          return;
-        }
-
-        const fallbackStart = startMs ?? allTimes[0] ?? Date.now();
-        const rawFallbackEnd = endMs ?? allTimes[allTimes.length - 1] ?? fallbackStart;
-        const fallbackEnd = Math.max(rawFallbackEnd, fallbackStart);
-
-        // Build datasets using {x, y} point format for time scale
-        const usernames = Array.isArray(playerUsernames) && playerUsernames.length > 0
-          ? playerUsernames
-          : Object.keys(byUser);
-        const datasets = usernames.map((username, i) => {
-          const events = byUser[username];
-          let cumulative = 0;
-          const pointsAtTime = new Map();
-          for (const ev of events) {
-            const eventTime = ev.time.getTime();
-            pointsAtTime.set(eventTime, (pointsAtTime.get(eventTime) || 0) + ev.points);
-          }
-
-          // Build data array with explicit start/end anchors so every player starts bottom-left.
-          let runningTotal = 0;
-          const data = [{ x: fallbackStart, y: 0 }];
-
-          for (const t of allTimes) {
-            if (t < fallbackStart || t > fallbackEnd) continue;
-            if (pointsAtTime.has(t)) {
-              runningTotal += pointsAtTime.get(t);
-            }
-            data.push({ x: t, y: runningTotal });
-          }
-
-          const lastScore = data[data.length - 1]?.y ?? 0;
-          data.push({ x: fallbackEnd, y: lastScore });
-
-
-          const color = CHART_COLORS[i % CHART_COLORS.length];
-          return {
-            label: username,
-            data,
-            borderColor: color,
-            backgroundColor: color,
-            tension: 0.35,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            cubicInterpolationMode: 'monotone',
-            fill: false,
-          };
-        });
-
-        // Determine x-axis min/max from competition times
-        const xMin = fallbackStart;
-        const xMax = fallbackEnd;
-
-        new Chart(canvas, {
-          type: 'line',
-          data: { datasets },
-          options: {
-            responsive: true,
-            interaction: {
-              mode: 'index',
-              intersect: false,
-            },
-            plugins: {
-              legend: {
-                labels: {
-                  color: '#A1B1D1',
-                  font: { family: 'Orbitron, sans-serif', size: 12 },
-                },
-              },
-              tooltip: {
-                backgroundColor: '#151E2D',
-                titleColor: '#e3e4e7',
-                bodyColor: '#A1B1D1',
-                borderColor: '#1f2b43',
-                borderWidth: 1,
-              },
-            },
-            scales: {
-              x: {
-                type: 'time',
-                min: xMin,
-                max: xMax,
-                time: {
-                  displayFormats: {
-                    minute: 'HH:mm',
-                    hour: 'MMM d, HH:mm',
-                    day: 'MMM d',
-                  },
-                },
-                ticks: { color: '#A1B1D1', font: { size: 11 }, maxRotation: 45 },
-                grid: { color: 'rgba(31, 43, 67, 0.5)' },
-              },
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Points', color: '#A1B1D1', font: { family: 'Orbitron, sans-serif' } },
-                ticks: { color: '#A1B1D1' },
-                grid: { color: 'rgba(31, 43, 67, 0.5)' },
-              },
-            },
-          },
-        });
-      }
-
-      buildGraph();
-    </script>
 
     <style>
       .leaderboard-page {
