@@ -5,9 +5,18 @@ import "../styles/global.css";
 import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
 import { initTasksTable, getAllTasks, type Task } from "../lib/tasks";
+import { getCompetitionEnd } from "../lib/settings";
 import Header from "../components/Header.astro";
 
 const user = await getCurrentUser(Astro.request);
+const competitionEnd = getCompetitionEnd();
+const FREEZE_MINUTES = 15;
+let leaderboardFrozen = false;
+if (competitionEnd) {
+  const endTime = new Date(competitionEnd).getTime();
+  const msRemaining = endTime - Date.now();
+  leaderboardFrozen = msRemaining > 0 && msRemaining <= FREEZE_MINUTES * 60 * 1000;
+}
 let users: User[] = [];
 
 try {
@@ -59,6 +68,7 @@ const currentUserIndex = user
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   </head>
   <body>
     <Header user={user} />
@@ -73,39 +83,48 @@ const currentUserIndex = user
           </p>
         )}
       </div>
-      <div class="graph-section">
-        <div class="graph-card">
-          <canvas id="completionGraph"></canvas>
-        </div>
-      </div>
-
-      {leaderboard.length === 0 ? (
-        <div class="leaderboard-empty">
-          <p>No scores yet</p>
+      {leaderboardFrozen ? (
+        <div class="leaderboard-frozen">
+          <h2>Leaderboard Frozen</h2>
+          <p>The leaderboard has been hidden for the final {FREEZE_MINUTES} minutes of the competition. Keep solving problems — results will be revealed when time is up!</p>
         </div>
       ) : (
-        <div class="leaderboard-card">
-          <table class="leaderboard-table">
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Player</th>
-                <th>Tasks Completed</th>
-                <th>Total Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((entry, index) => (
-                <tr class={user?.username === entry.username ? "is-current" : ""}>
-                  <td>#{index + 1}</td>
-                  <td>{entry.username}</td>
-                  <td>{entry.completedCount}</td>
-                  <td>{entry.totalPoints}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div class="graph-section">
+            <div class="graph-card">
+              <canvas id="completionGraph"></canvas>
+            </div>
+          </div>
+
+          {leaderboard.length === 0 ? (
+            <div class="leaderboard-empty">
+              <p>No scores yet</p>
+            </div>
+          ) : (
+            <div class="leaderboard-card">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Tasks Completed</th>
+                    <th>Total Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((entry, index) => (
+                    <tr class={user?.username === entry.username ? "is-current" : ""}>
+                      <td>#{index + 1}</td>
+                      <td>{entry.username}</td>
+                      <td>{entry.completedCount}</td>
+                      <td>{entry.totalPoints}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </main>
 
@@ -122,18 +141,21 @@ const currentUserIndex = user
         'rgb(0, 255, 127)',
         'rgb(255, 105, 180)',
       ];
- 
+
       async function buildGraph() {
+        const canvas = document.getElementById('completionGraph');
+        if (!canvas) return;
+
         const res = await fetch('/api/completions');
         if (!res.ok) return;
-        const { completions, pointsById } = await res.json();
- 
+        const { completions, pointsById, competitionStart, competitionEnd } = await res.json();
+
         if (completions.length === 0) {
           const container = document.querySelector('.graph-card');
           if (container) container.innerHTML = '<p style="color: var(--small-text); text-align: center; padding: 24px;">No completions yet</p>';
           return;
         }
- 
+
         // Group completions by user
         const byUser = {};
         for (const c of completions) {
@@ -144,35 +166,47 @@ const currentUserIndex = user
             points: pointsById[c.task_id] || 0,
           });
         }
- 
+
         // Collect all unique timestamps and sort them
         const allTimes = [...new Set(completions.map(c => new Date(c.completed_at).getTime()))].sort((a, b) => a - b);
-        const labels = allTimes.map(t => {
-          const d = new Date(t);
-          return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        });
- 
-        // Build datasets: for each user, cumulative points at each timestamp
+
+        // Build datasets using {x, y} point format for time scale
         const usernames = Object.keys(byUser);
         const datasets = usernames.map((username, i) => {
           const events = byUser[username];
           let cumulative = 0;
-          // Map of time -> cumulative points after that event
           const pointsAtTime = new Map();
           for (const ev of events) {
             cumulative += ev.points;
             pointsAtTime.set(ev.time.getTime(), cumulative);
           }
- 
-          // Build data array: for each global timestamp, use last known cumulative
+
+          // Build data array with {x: timestamp, y: points}
           let runningTotal = 0;
           const data = allTimes.map(t => {
             if (pointsAtTime.has(t)) {
               runningTotal = pointsAtTime.get(t);
             }
-            return runningTotal;
+            return { x: t, y: runningTotal };
           });
- 
+
+          // Add a starting point at competition start with 0 points
+          if (competitionStart) {
+            const startMs = new Date(competitionStart).getTime();
+            if (data.length === 0 || data[0].x > startMs) {
+              data.unshift({ x: startMs, y: 0 });
+            }
+          }
+
+          // Extend the line to competition end with the final score
+          if (competitionEnd) {
+            const endMs = new Date(competitionEnd).getTime();
+            const lastPoint = data[data.length - 1];
+            if (lastPoint && lastPoint.x < endMs) {
+              data.push({ x: endMs, y: lastPoint.y });
+            }
+          }
+
           const color = CHART_COLORS[i % CHART_COLORS.length];
           return {
             label: username,
@@ -185,11 +219,14 @@ const currentUserIndex = user
             fill: false,
           };
         });
- 
-        const canvas = document.getElementById('completionGraph');
+
+        // Determine x-axis min/max from competition times
+        const xMin = competitionStart ? new Date(competitionStart).getTime() : undefined;
+        const xMax = competitionEnd ? new Date(competitionEnd).getTime() : undefined;
+
         new Chart(canvas, {
           type: 'line',
-          data: { labels, datasets },
+          data: { datasets },
           options: {
             responsive: true,
             interaction: {
@@ -213,6 +250,16 @@ const currentUserIndex = user
             },
             scales: {
               x: {
+                type: 'time',
+                min: xMin,
+                max: xMax,
+                time: {
+                  displayFormats: {
+                    minute: 'HH:mm',
+                    hour: 'MMM d, HH:mm',
+                    day: 'MMM d',
+                  },
+                },
                 ticks: { color: '#A1B1D1', font: { size: 11 }, maxRotation: 45 },
                 grid: { color: 'rgba(31, 43, 67, 0.5)' },
               },
@@ -226,7 +273,7 @@ const currentUserIndex = user
           },
         });
       }
- 
+
       buildGraph();
     </script>
 
@@ -303,6 +350,28 @@ const currentUserIndex = user
         padding: 24px;
         margin-top: 16px;
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+      }
+
+      .leaderboard-frozen {
+        margin-top: 48px;
+        padding: 48px 32px;
+        border-radius: 16px;
+        background: rgba(255, 174, 0, 0.06);
+        border: 1px solid rgba(255, 174, 0, 0.25);
+        text-align: center;
+      }
+
+      .leaderboard-frozen h2 {
+        color: #ffae00;
+        margin: 0 0 12px;
+        font-size: 1.4rem;
+      }
+
+      .leaderboard-frozen p {
+        color: var(--small-text);
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.6;
       }
     </style>
   </body>

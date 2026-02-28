@@ -52,9 +52,18 @@ const competitionEnd = getCompetitionEnd();
               />
               <p class="settings-hint">Set the date and time when tasks become available. The front page will show a countdown to this time.</p>
             </div>
+            <div class="form-row">
+              <label for="competition-end">Competition End Time</label>
+              <input
+                id="competition-end"
+                type="datetime-local"
+                value={competitionEnd ? new Date(competitionEnd).toISOString().slice(0, 16) : ""}
+              />
+              <p class="settings-hint">Set the date and time when the competition ends. The leaderboard will be frozen 15 minutes before the end.</p>
+            </div>
             <div class="form-actions-row">
               <button type="submit" class="primary-btn">Save Settings</button>
-              <button id="clear-start-btn" type="button" class="secondary-btn">Clear Date</button>
+              <button id="clear-dates-btn" type="button" class="secondary-btn">Clear Dates</button>
               <button id="start-now-btn" type="button" class="secondary-btn">Start Now</button>
             </div>
           </form>
@@ -62,6 +71,10 @@ const competitionEnd = getCompetitionEnd();
             {competitionStart
               ? <p>Current start: <strong>{new Date(competitionStart).toLocaleString("en-GB")}</strong></p>
               : <p>No competition start time set. The countdown will show "TBA".</p>
+            }
+            {competitionEnd
+              ? <p>Current end: <strong>{new Date(competitionEnd).toLocaleString("en-GB")}</strong></p>
+              : <p>No competition end time set.</p>
             }
           </div>
         </div>
@@ -80,46 +93,52 @@ const competitionEnd = getCompetitionEnd();
       }
         
         // ---- Settings tab ----
+        function updateStatusDisplay(startISO: string | null, endISO: string | null) {
+        const statusDiv = document.getElementById('settings-status');
+        if (!statusDiv) return;
+        const startHtml = startISO
+          ? `<p>Current start: <strong>${new Date(startISO).toLocaleString('en-GB')}</strong></p>`
+          : '<p>No competition start time set. The countdown will show "TBA".</p>';
+        const endHtml = endISO
+          ? `<p>Current end: <strong>${new Date(endISO).toLocaleString('en-GB')}</strong></p>`
+          : '<p>No competition end time set.</p>';
+        statusDiv.innerHTML = startHtml + endHtml;
+      }
+
       const settingsForm = document.getElementById('settings-form');
       settingsForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const input = document.getElementById('competition-start') as HTMLInputElement;
-        const value = input.value;
-        const competition_start = value ? new Date(value).toISOString() : null;
+        const startInput = document.getElementById('competition-start') as HTMLInputElement;
+        const endInput = document.getElementById('competition-end') as HTMLInputElement;
+        const competition_start = startInput.value ? new Date(startInput.value).toISOString() : null;
+        const competition_end = endInput.value ? new Date(endInput.value).toISOString() : null;
  
         const res = await fetch('/api/admin/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ competition_start }),
+          body: JSON.stringify({ competition_start, competition_end }),
         });
         const data = await res.json();
         if (data.success) {
-          showStatus('Competition start time saved');
-          const statusDiv = document.getElementById('settings-status');
-          if (statusDiv) {
-            statusDiv.innerHTML = competition_start
-              ? `<p>Current start: <strong>${new Date(competition_start).toLocaleString('en-GB')}</strong></p>`
-              : '<p>No competition start time set. The countdown will show "TBA".</p>';
-          }
+          showStatus('Competition settings saved');
+          updateStatusDisplay(data.competition_start, data.competition_end);
         } else {
           showStatus(data.error || 'Failed to save settings', true);
         }
       });
  
-      document.getElementById('clear-start-btn')?.addEventListener('click', async () => {
+      document.getElementById('clear-dates-btn')?.addEventListener('click', async () => {
         const res = await fetch('/api/admin/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ competition_start: null }),
+          body: JSON.stringify({ competition_start: null, competition_end: null }),
         });
         const data = await res.json();
         if (data.success) {
-          showStatus('Competition start time cleared');
+          showStatus('Competition dates cleared');
           (document.getElementById('competition-start') as HTMLInputElement).value = '';
-          const statusDiv = document.getElementById('settings-status');
-          if (statusDiv) {
-            statusDiv.innerHTML = '<p>No competition start time set. The countdown will show "TBA".</p>';
-          }
+          (document.getElementById('competition-end') as HTMLInputElement).value = '';
+          updateStatusDisplay(null, null);
         } else {
           showStatus(data.error || 'Failed to clear settings', true);
         }
@@ -136,10 +155,7 @@ const competitionEnd = getCompetitionEnd();
         if (data.success) {
           showStatus('Competition started');
           (document.getElementById('competition-start') as HTMLInputElement).value = now.slice(0, 16);
-          const statusDiv = document.getElementById('settings-status');
-          if (statusDiv) {
-            statusDiv.innerHTML = `<p>Current start: <strong>${new Date(now).toLocaleString('en-GB')}</strong></p>`;
-          }
+          updateStatusDisplay(data.competition_start, data.competition_end);
         } else {
           showStatus(data.error || 'Failed to start competition', true);
         }
