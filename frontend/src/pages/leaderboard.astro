@@ -6,6 +6,7 @@ import { getCurrentUser } from "../lib/session";
 import { getAllUsers, type User } from "../lib/users";
 import { initTasksTable, getAllTasks, type Task } from "../lib/tasks";
 import { getCompetitionEnd } from "../lib/settings";
+import ScoreGraph from "../components/ScoreGraph.astro";
 import Header from "../components/Header.astro";
 
 const user = await getCurrentUser(Astro.request);
@@ -93,6 +94,9 @@ const currentUserIndex = user
               <canvas id="completionGraph"></canvas>
             </div>
           </div>
+
+          <h2>Score Progress</h2>
+          <ScoreGraph refreshMs={5000} />
 
           {leaderboard.length === 0 ? (
             <div class="leaderboard-empty">
