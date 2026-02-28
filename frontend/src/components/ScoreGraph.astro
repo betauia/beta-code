@@ -85,7 +85,7 @@ const { refreshMs = 5000 } = Astro.props;
     data: { datasets: [] },
     options: {
       responsive: true,
-      parsing: false,
+      parsing: true,
       animation: {
         duration: 300, // small “tick” animation on updates
       },
@@ -153,8 +153,8 @@ const { refreshMs = 5000 } = Astro.props;
       data: series[player] ?? [{ x: competitionStart, y: 0 }, { x: competitionEnd, y: 0 }],
       borderColor: colorFor(player),
       backgroundColor: colorFor(player),
-      stepped: true,     // ✅ key: “solve jumps” like picoCTF/HTB
-      tension: 0,
+      stepped: false,     // ✅ key: “solve jumps” like picoCTF/HTB
+      tension: 0.05,
       fill: false,
     }));
 
