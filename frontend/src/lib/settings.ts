@@ -9,6 +9,7 @@ const SETTINGS_PATH = path.join(__dirname, "..", "data", "settings-store.json");
 
 interface Settings {
   competition_start: string | null;
+  competition_end: string | null;
 }
 
 function readSettings(): Settings {
@@ -16,7 +17,7 @@ function readSettings(): Settings {
     const raw = fs.readFileSync(SETTINGS_PATH, "utf-8");
     return JSON.parse(raw);
   } catch (err: any) {
-    if (err?.code === "ENOENT") return { competition_start: null };
+    if (err?.code === "ENOENT") return { competition_start: null, competition_end: null };
     throw err;
   }
 }
@@ -40,4 +41,21 @@ export function hasCompetitionStarted(): boolean {
   const start = getCompetitionStart();
   if (!start) return true;
   return Date.now() >= new Date(start).getTime();
+}
+
+
+export function getCompetitionEnd(): string | null {
+  return readSettings().competition_end;
+}
+
+export function setCompetitionEnd(dateISO: string | null): void {
+  const settings = readSettings();
+  settings.competition_end = dateISO;
+  writeSettings(settings);
+}
+
+export function hasCompetitionEnded(): boolean {
+  const end = getCompetitionEnd();
+  if (!end) return false;
+  return Date.now() >= new Date(end).getTime();
 }
