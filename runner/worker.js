@@ -14,6 +14,8 @@ const REDIS_URL = process.env.REDIS_URL;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:4321";
 
+const RUNNER_SECRET = process.env.RUNNER_SECRET || "";
+
 const JOBS_BASE =
   process.env.JOBS_BASE ||
   join(__dirname, "jobs");
@@ -24,7 +26,11 @@ if (!REDIS_URL) throw new Error("Missing REDIS_URL");
 
 async function getTestsFromAPI(taskId) {
   const url = `${FRONTEND_URL}/api/tasks/tests?taskId=${taskId}`;
-  const res = await fetch(url);
+  const headers = {};
+  if (RUNNER_SECRET) {
+    headers["Authorization"] = `Bearer ${RUNNER_SECRET}`;
+  }
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Failed to fetch tests for task ${taskId}: ${res.status} ${text}`);

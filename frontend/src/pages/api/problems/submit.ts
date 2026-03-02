@@ -2,7 +2,8 @@ export const prerender = false;
 
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
-import { hasCompetitionStarted } from "../../../lib/settings";
+import { hasCompetitionStarted, hasCompetitionEnded } from "../../../lib/settings";
+import { getCurrentUser } from "../../../lib/session";
 
 const REDIS_URL = import.meta.env.REDIS_URL || process.env.REDIS_URL;
 if (!REDIS_URL) throw new Error("Missing REDIS_URL");
@@ -11,12 +12,28 @@ const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 const queue = new Queue("submissions", { connection });
 
 export async function POST({ request }: { request: Request }) {
+  const user = await getCurrentUser(request);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Not logged in" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (!hasCompetitionStarted()) {
     return new Response(JSON.stringify({ error: "Competition has not started yet" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  if (hasCompetitionEnded()) {
+    return new Response(JSON.stringify({ error: "Competition has ended" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const body = await request.json().catch(() => ({}));
   const code = String(body?.code ?? "");
   const problemId = String(body?.problemId ?? "");

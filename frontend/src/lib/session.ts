@@ -7,6 +7,18 @@ const sessions = new Map<string, { userId: number; expiresAt: number }>();
  
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const COOKIE_NAME = "session_id";
+
+const CLEANUP_INTERVAL = 60 * 60 * 1000 * 6; // 1 hour
+ 
+// Periodically clean up expired sessions to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (now > session.expiresAt) {
+      sessions.delete(id);
+    }
+  }
+}, CLEANUP_INTERVAL);
  
 // Generate a secure session ID
 function generateSessionId(): string {

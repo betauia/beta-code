@@ -2,7 +2,7 @@
   "name": "judge-runner",
   "type": "module",
   "dependencies": {
-    "bullmq": "^5.0.0",
-    "ioredis": "^5.0.0"
+    "bullmq": "^5.67.2",
+    "ioredis": "^5.9.2"
   }
 }

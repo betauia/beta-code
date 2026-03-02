@@ -10,10 +10,12 @@ export async function GET({ url }: { url: URL }) {
   const fileName = url.searchParams.get("fileName");
 
   if (!taskId || !fileName) {
-    return new Response(JSON.stringify({ error: "Missing taskId or fileName" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    if (!taskId || !fileName || !/^[a-zA-Z0-9_.-]+$/.test(fileName)) {
+      return new Response(JSON.stringify({ error: "Missing or invalid taskId/fileName" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }
 
   await initTasksTable();

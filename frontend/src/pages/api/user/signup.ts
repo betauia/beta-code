@@ -26,7 +26,14 @@ export async function POST({ request }: { request: Request }) {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
- 
+    
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return new Response(
+        JSON.stringify({ error: "Username can only contain letters, numbers, underscores, and hyphens" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    
     if (password.length < 6) {
       return new Response(
         JSON.stringify({ error: "Password must be at least 6 characters" }),
