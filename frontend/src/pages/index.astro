@@ -1,16 +1,16 @@
 ---
 export const prerender = false;
- 
+
 import "../styles/global.css";
 import Footer from "../components/footer.astro";
 import { getCurrentUser } from "../lib/session";
 import { getCompetitionStart } from "../lib/settings";
 import Header from "../components/Header.astro";
- 
+
 const user = await getCurrentUser(Astro.request);
 const competitionStart = getCompetitionStart();
 ---
- 
+
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -23,10 +23,9 @@ const competitionStart = getCompetitionStart();
 	</head>
 	<body>
 		<Header user={user} />
-		<h1 class="center-page">Competition starts in:</h1>
 		<div class="countdown-wrapper">
-			<h1 class="countdown-title">Competition starts in:</h1>
- 
+			<h1 id="cd-title" class="countdown-title">Competition starts in:</h1>
+
 			<div id="countdown" class="countdown-display">
 				<div class="countdown-unit">
 					<span id="cd-days" class="countdown-value">--</span>
@@ -48,61 +47,65 @@ const competitionStart = getCompetitionStart();
 					<span class="countdown-label">Seconds</span>
 				</div>
 			</div>
- 
-			<p id="cd-message" class="countdown-message"></p>
+
+			<a id="tasks-btn" href="/problems" class="tasks-button">Go to Tasks</a>
 		</div>
-		
+
 		<Footer />
 	</body>
-	
+
 	<script define:vars={{ competitionStart }}>
 		function pad(n) {
 			return String(n).padStart(2, '0');
 		}
- 
+
 		function updateCountdown() {
 			const daysEl = document.getElementById('cd-days');
 			const hoursEl = document.getElementById('cd-hours');
 			const minutesEl = document.getElementById('cd-minutes');
 			const secondsEl = document.getElementById('cd-seconds');
-			const messageEl = document.getElementById('cd-message');
- 
+			const titleEl = document.getElementById('cd-title');
+			const tasksBtn = document.getElementById('tasks-btn');
+
 			if (!competitionStart) {
 				daysEl.textContent = '--';
 				hoursEl.textContent = '--';
 				minutesEl.textContent = '--';
 				secondsEl.textContent = '--';
-				messageEl.textContent = 'Start time TBA';
+				titleEl.textContent = 'Start time TBA';
+				tasksBtn.classList.remove('visible');
 				return;
 			}
 			const target = new Date(competitionStart).getTime();
 			const now = Date.now();
 			const diff = target - now;
- 
+
 			if (diff <= 0) {
 				daysEl.textContent = '00';
 				hoursEl.textContent = '00';
 				minutesEl.textContent = '00';
 				secondsEl.textContent = '00';
-				messageEl.textContent = 'The competition is live!';
-				messageEl.classList.add('live');
+				titleEl.textContent = 'The competition is live!';
+				titleEl.classList.add('live');
+				tasksBtn.classList.add('visible');
 				return;
 			}
- 
+
 			const totalSeconds = Math.floor(diff / 1000);
 			const days = Math.floor(totalSeconds / 86400);
 			const hours = Math.floor((totalSeconds % 86400) / 3600);
 			const minutes = Math.floor((totalSeconds % 3600) / 60);
 			const seconds = totalSeconds % 60;
- 
+
 			daysEl.textContent = pad(days);
 			hoursEl.textContent = pad(hours);
 			minutesEl.textContent = pad(minutes);
 			secondsEl.textContent = pad(seconds);
-			messageEl.textContent = '';
-			messageEl.classList.remove('live');
+			titleEl.textContent = 'Competition starts in:';
+			titleEl.classList.remove('live');
+			tasksBtn.classList.remove('visible');
 		}
- 
+
 		updateCountdown();
 		setInterval(updateCountdown, 1000);
 	</script>
@@ -123,7 +126,7 @@ const competitionStart = getCompetitionStart();
 			justify-content: center;
 			padding: 80px 16px 40px;
 		}
- 
+
 		.countdown-title {
 			font-size: 1.4rem;
 			font-weight: 600;
@@ -132,13 +135,13 @@ const competitionStart = getCompetitionStart();
 			text-transform: uppercase;
 			letter-spacing: 0.08em;
 		}
- 
+
 		.countdown-display {
 			display: flex;
 			align-items: center;
 			gap: 12px;
 		}
- 
+
 		.countdown-unit {
 			display: flex;
 			flex-direction: column;
@@ -149,7 +152,7 @@ const competitionStart = getCompetitionStart();
 			padding: 20px 24px;
 			min-width: 90px;
 		}
- 
+
 		.countdown-value {
 			font-family: "Orbitron", sans-serif;
 			font-size: 2.8rem;
@@ -157,7 +160,7 @@ const competitionStart = getCompetitionStart();
 			color: var(--beta-blue);
 			line-height: 1;
 		}
- 
+
 		.countdown-label {
 			font-size: 0.75rem;
 			font-weight: 600;
@@ -166,7 +169,7 @@ const competitionStart = getCompetitionStart();
 			letter-spacing: 0.1em;
 			margin-top: 8px;
 		}
- 
+
 		.countdown-separator {
 			font-family: "Orbitron", sans-serif;
 			font-size: 2.4rem;
@@ -174,17 +177,42 @@ const competitionStart = getCompetitionStart();
 			color: var(--small-text);
 			padding-bottom: 20px;
 		}
- 
-		.countdown-message {
-			margin-top: 24px;
-			font-size: 1rem;
-			color: var(--small-text);
-			min-height: 1.5em;
-		}
- 
-		.countdown-message.live {
+
+		.countdown-title.live {
 			color: #2ecc71;
+		}
+
+		.tasks-button {
+			display: inline-block;
+			margin-top: 48px;
+			padding: 18px 48px;
+			font-family: "Orbitron", sans-serif;
+			font-size: 1.4rem;
 			font-weight: 700;
+			color: #fff;
+			background: var(--beta-blue);
+			border: none;
+			border-radius: 12px;
+			text-decoration: none;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			cursor: pointer;
+			opacity: 0;
+			transform: translateY(10px);
+			pointer-events: none;
+			transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s ease;
+			box-shadow: 0 4px 24px rgba(0, 133, 254, 0.3);
+		}
+
+		.tasks-button.visible {
+			opacity: 1;
+			transform: translateY(0);
+			pointer-events: auto;
+		}
+
+		.tasks-button:hover {
+			box-shadow: 0 6px 32px rgba(0, 133, 254, 0.5);
+			background: rgb(20, 145, 255);
 		}
 	</style>
 </html>

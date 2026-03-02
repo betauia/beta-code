@@ -14,6 +14,7 @@ if (!id) throw new Error("Missing problem id in route params");
 
 await initTasksTable();
 const problem = await getTaskById(Number(id));
+const difficulty = problem?.difficulty ?? "Unknown";
 const starterCode = problem?.code_preview ?? "";
 
 // Collect unique data files (name + content) from non-hidden tests for this task
@@ -28,11 +29,12 @@ const dataFiles = [
 ---
 
 <ProblemLayout activeId={id}>
-  <section class="problem-page" data-problem-id={id} data-starter-code={starterCode}>
+  <section class="problem-page" data-problem-id={id} data-starter-code={starterCode} data-difficulty={difficulty}>
     <div class="problem-header">
       <h1>Problem {id}</h1>
-      {problem?.type === "solve" && <div class="task-type-badge solve-badge">Solve</div>}
-      {problem?.type === "fix"   && <div class="task-type-badge fix-badge">Bug Fix</div>}
+      {difficulty === "Easy" && <span class="type-tag easy-tag">Easy</span>}
+      {difficulty === "Medium" && <span class="type-tag medium-tag">Medium</span>}
+      {difficulty === "Hard" && <span class="type-tag hard-tag">Hard</span>}
     </div>
 
     <div class="problem-description">
@@ -583,29 +585,6 @@ const dataFiles = [
     gap: 1rem;
   }
 
-  .task-type-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    width: fit-content;
-  }
-
-  .solve-badge {
-    background: rgba(46, 204, 113, 0.15);
-    color: #2ecc71;
-    border: 1px solid rgba(46, 204, 113, 0.3);
-  }
-
-  .fix-badge {
-    background: rgba(230, 126, 34, 0.15);
-    color: #e67e22;
-    border: 1px solid rgba(230, 126, 34, 0.3);
-  }
-
   .code-box {
     border: 1px solid #333;
     border-radius: 8px;
@@ -757,4 +736,32 @@ const dataFiles = [
   }
 
   .problem-header h1 { margin: 0; }
+
+  .type-tag {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 0.5rem;
+    }
+
+  .easy-tag {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+
+  .medium-tag {
+    background: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+    border: 1px solid rgba(241, 196, 15, 0.3);
+  }
+
+  .hard-tag {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+  }
 </style>

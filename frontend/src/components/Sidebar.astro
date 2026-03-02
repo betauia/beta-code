@@ -8,10 +8,10 @@ const { problems, activeId } = Astro.props as {
 ---
 
 <aside class="sidebar">
-  <div class="sidebar-title">Tasks</div>
   <nav class="site-nav">
 			<a href="../../">Home</a>
 			<a href="/problems">Tasks</a>
+      <a href="/leaderboard">Leaderboard</a>
 		</nav>
 
   <nav class="sidebar-nav">
@@ -82,5 +82,23 @@ const { problems, activeId } = Astro.props as {
     opacity: 0.8;
     font-size: 0.9em;
     flex-shrink: 0;
+  }
+  
+  .easy-tag {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+
+  .medium-tag {
+    background: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+    border: 1px solid rgba(241, 196, 15, 0.3);
+  }
+
+  .hard-tag {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
   }
 </style>
