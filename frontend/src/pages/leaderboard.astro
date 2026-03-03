@@ -13,10 +13,12 @@ const user = await getCurrentUser(Astro.request);
 const competitionEnd = getCompetitionEnd();
 const FREEZE_MINUTES = 15;
 let leaderboardFrozen = false;
+let competitionOver = false;
 if (competitionEnd) {
   const endTime = new Date(competitionEnd).getTime();
   const msRemaining = endTime - Date.now();
   leaderboardFrozen = msRemaining > 0 && msRemaining <= FREEZE_MINUTES * 60 * 1000;
+  competitionOver = msRemaining <= 0;
 }
 let users: User[] = [];
 
@@ -82,51 +84,130 @@ const currentUserIndex = user
           </p>
         )}
       </div>
-      {leaderboardFrozen ? (
-        <div class="leaderboard-frozen">
-          <h2>Leaderboard Frozen</h2>
-          <p>The leaderboard has been hidden for the final {FREEZE_MINUTES} minutes of the competition. Keep solving problems — results will be revealed when time is up!</p>
-        </div>
-      ) : (
-        <>
-          <div class="graph-section">
-            <h2>Score Progress</h2>
-            <div class="graph-card">
-              <ScoreGraph refreshMs={5000} />
+      {competitionEnd && !competitionOver && (
+        <div class="countdown-section">
+          <h1 id="cd-title" class="countdown-title">Competition ends in:</h1>
+          <div id="countdown" class="countdown-display">
+            <div class="countdown-unit">
+              <span id="cd-days" class="countdown-value">--</span>
+              <span class="countdown-label">Days</span>
+            </div>
+            <span class="countdown-separator">:</span>
+            <div class="countdown-unit">
+              <span id="cd-hours" class="countdown-value">--</span>
+              <span class="countdown-label">Hours</span>
+            </div>
+            <span class="countdown-separator">:</span>
+            <div class="countdown-unit">
+              <span id="cd-minutes" class="countdown-value">--</span>
+              <span class="countdown-label">Minutes</span>
+            </div>
+            <span class="countdown-separator">:</span>
+            <div class="countdown-unit">
+              <span id="cd-seconds" class="countdown-value">--</span>
+              <span class="countdown-label">Seconds</span>
             </div>
           </div>
-
-          {leaderboard.length === 0 ? (
-            <div class="leaderboard-empty">
-              <p>No scores yet</p>
-            </div>
-          ) : (
-            <div class="leaderboard-card">
-              <table class="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th>Tasks Completed</th>
-                    <th>Total Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((entry, index) => (
-                    <tr class={user?.username === entry.username ? "is-current" : ""}>
-                      <td>#{index + 1}</td>
-                      <td>{entry.username}</td>
-                      <td>{entry.completedCount}</td>
-                      <td>{entry.totalPoints}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+        </div>
       )}
+
+      <div id="leaderboard-content" style={leaderboardFrozen ? "display:none" : ""}>
+        <div class="graph-section">
+          <h2>Score Progress</h2>
+          <div class="graph-card">
+            <ScoreGraph refreshMs={5000} />
+          </div>
+        </div>
+
+        {leaderboard.length === 0 ? (
+          <div class="leaderboard-empty">
+            <p>No scores yet</p>
+          </div>
+        ) : (
+          <div class="leaderboard-card">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Tasks Completed</th>
+                  <th>Total Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((entry, index) => (
+                  <tr class={user?.username === entry.username ? "is-current" : ""}>
+                    <td>#{index + 1}</td>
+                    <td>{entry.username}</td>
+                    <td>{entry.completedCount}</td>
+                    <td>{entry.totalPoints}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </main>
+
+    <script define:vars={{ competitionEnd, FREEZE_MINUTES }}>
+      function pad(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      function updateCountdown() {
+        const daysEl = document.getElementById('cd-days');
+        const hoursEl = document.getElementById('cd-hours');
+        const minutesEl = document.getElementById('cd-minutes');
+        const secondsEl = document.getElementById('cd-seconds');
+        const titleEl = document.getElementById('cd-title');
+        const frozenBanner = document.getElementById('frozen-banner');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+
+        if (!competitionEnd || !daysEl) return;
+
+        const endTime = new Date(competitionEnd).getTime();
+        const now = Date.now();
+        const diff = endTime - now;
+
+        if (diff <= 0) {
+          // Competition is over — reload to show final results
+          window.location.reload();
+          return;
+        }
+
+        const totalSeconds = Math.floor(diff / 1000);
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        daysEl.textContent = pad(days);
+        hoursEl.textContent = pad(hours);
+        minutesEl.textContent = pad(minutes);
+        secondsEl.textContent = pad(seconds);
+
+        const freezeMs = FREEZE_MINUTES * 60 * 1000;
+        const isFrozen = diff <= freezeMs;
+
+        if (isFrozen) {
+          titleEl.textContent = 'Results revealed in:';
+          titleEl.classList.add('frozen');
+          if (frozenBanner) frozenBanner.style.display = '';
+          if (leaderboardContent) leaderboardContent.style.display = 'none';
+        } else {
+          titleEl.textContent = 'Competition ends in:';
+          titleEl.classList.remove('frozen');
+          if (frozenBanner) frozenBanner.style.display = 'none';
+          if (leaderboardContent) leaderboardContent.style.display = '';
+        }
+      }
+
+      if (competitionEnd) {
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+      }
+    </script>
 
     <style>
       .leaderboard-page {
@@ -203,26 +284,65 @@ const currentUserIndex = user
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
       }
 
-      .leaderboard-frozen {
-        margin-top: 48px;
-        padding: 48px 32px;
-        border-radius: 16px;
-        background: rgba(255, 174, 0, 0.06);
-        border: 1px solid rgba(255, 174, 0, 0.25);
+      .countdown-section {
+        margin-top: 32px;
         text-align: center;
       }
 
-      .leaderboard-frozen h2 {
-        color: #ffae00;
-        margin: 0 0 12px;
+      .countdown-title {
         font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--small-text);
+        margin: 0 0 40px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
-      .leaderboard-frozen p {
+      .countdown-title.frozen {
+        color: #ffae00;
+      }
+
+      .countdown-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .countdown-unit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #111b2b;
+        border: 1px solid #1f2b43;
+        border-radius: 12px;
+        padding: 20px 24px;
+        min-width: 90px;
+      }
+
+      .countdown-value {
+        font-family: "Orbitron", sans-serif;
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: var(--beta-blue);
+        line-height: 1;
+      }
+
+      .countdown-label {
+        font-size: 0.75rem;
+        font-weight: 600;
         color: var(--small-text);
-        margin: 0;
-        font-size: 1rem;
-        line-height: 1.6;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 8px;
+      }
+
+      .countdown-separator {
+        font-family: "Orbitron", sans-serif;
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: var(--small-text);
+        padding-bottom: 20px;
       }
     </style>
   </body>
