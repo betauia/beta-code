@@ -11,9 +11,10 @@ export async function getPool() {
 
   if (!globalForPool.__betaCodePoolPromise) {
     globalForPool.__betaCodePoolPromise = import("pg").then(({ Pool }) => {
+      const isLocalhost = DATABASE_URL.includes("localhost") || DATABASE_URL.includes("127.0.0.1");
       return new Pool({
         connectionString: DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+        ssl: isLocalhost ? false : { rejectUnauthorized: false },
       });
     });
   }
