@@ -1,6 +1,5 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { problems } from "../data/problems";
 
 export interface Task {
@@ -29,10 +28,8 @@ export interface TaskTest {
 type SerializedTask = Omit<Task, "created_at"> & { created_at: string };
 type SerializedTaskTest = Omit<TaskTest, "created_at"> & { created_at: string };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const tasksStorePath = path.resolve(__dirname, "../data/tasks-store.json");
-const testsStorePath = path.resolve(__dirname, "../data/tests-store.json");
+const tasksStorePath = path.resolve(process.cwd(), "src/data/tasks-store.json");
+const testsStorePath = path.resolve(process.cwd(), "src/data/tests-store.json");
 
 function fromSerializedTask(task: SerializedTask): Task {
   return { ...task, created_at: new Date(task.created_at) };
