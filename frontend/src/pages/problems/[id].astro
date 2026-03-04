@@ -27,6 +27,17 @@ const dataFiles = [
   ).values(),
 ];
 ---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="x-icon" href="/betaiconJustb.webp" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Problem {id} - BETA-CODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+  </head>
+</html>
 
 <ProblemLayout activeId={id}>
   <section class="problem-page" data-problem-id={id} data-starter-code={starterCode} data-difficulty={difficulty}>
@@ -36,7 +47,7 @@ const dataFiles = [
       {difficulty === "Medium" && <span class="type-tag medium-tag">Medium</span>}
       {difficulty === "Hard" && <span class="type-tag hard-tag">Hard</span>}
     </div>
-
+    
     <div class="problem-description">
       <p>{problem?.description ?? "Problem not found."}</p>
     </div>
