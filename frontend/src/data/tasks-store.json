@@ -2,93 +2,203 @@
   "tasks": [
     {
       "id": 1,
-      "name": "A + B",
-      "description": "Read two integers from stdin and print their sum.",
-      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b;\n}\n",
+      "name": "Multiply Two Numbers",
+      "description": "Read two integers from stdin and print their product.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read two integers and print their product\n}\n",
       "points": 50,
       "type": "solve",
       "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 2,
-      "name": "Count the E's",
-      "description": "Read a single word from stdin and print how many times the letter e appears.",
-      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a word and count the letter 'e'\n}\n",
+      "name": "Even or Odd",
+      "description": "Read an integer from stdin and print `Even` if it is even or `Odd` if it is odd.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read an integer and print \"Even\" or \"Odd\"\n}\n",
       "points": 50,
       "type": "solve",
       "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 3,
-      "name": "FizzBuzz",
-      "description": "Print numbers 1..N using Fizz/Buzz/FizzBuzz rules.",
-      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your FizzBuzz solution here\n}\n",
-      "points": 75,
+      "name": "Reverse a String",
+      "description": "Read a single word from stdin and print it reversed.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a word and print it reversed\n}\n",
+      "points": 50,
       "type": "solve",
       "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 4,
-      "name": "Fix the Sum",
-      "description": "This program should compute 1 + 2 + ... + N, but has a bug.",
-      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    int sum;\n    for (int i = 1; i <= n; i++) {\n        sum = sum + i;\n    }\n    cout << sum << endl;\n    return 0;\n}\n",
+      "name": "Find the Maximum",
+      "description": "Read an integer N followed by N integers. Print the largest integer.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N, then N integers, and print the maximum\n}\n",
       "points": 60,
-      "type": "fix",
+      "type": "solve",
       "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 5,
-      "name": "JSON Name Lookup",
-      "description": "Read a name and look up its score in data.json.",
-      "code_preview": "#include <iostream>\nint main() {\n    // Fix the lookup bug\n}\n",
-      "points": 100,
-      "type": "fix",
-      "difficulty": "Medium",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "name": "Count Vowels",
+      "description": "Read a single word from stdin and print the number of vowels (a, e, i, o, u — lowercase only) it contains.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a word and count the vowels\n}\n",
+      "points": 50,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 6,
-      "name": "CSV Average",
-      "description": "Read a column name and compute average from data.csv.",
-      "code_preview": "#include <iostream>\nint main() {\n    // Fix CSV parsing\n}\n",
-      "points": 100,
-      "type": "fix",
-      "difficulty": "Medium",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "name": "Sum of Array",
+      "description": "Read an integer N, then N integers. Print their sum.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N, then N integers, and print their sum\n}\n",
+      "points": 50,
+      "type": "solve",
+      "difficulty": "Easy",
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 7,
-      "name": "CSV Top Scorer",
-      "description": "Find the highest scorer in data.csv.",
-      "code_preview": "#include <iostream>\nint main() {\n    // Open data.csv and find top scorer\n}\n",
-      "points": 75,
+      "name": "Celsius to Fahrenheit",
+      "description": "Read an integer temperature in Celsius from stdin. Print the equivalent temperature in Fahrenheit, rounded down to the nearest integer. Formula: F = C * 9 / 5 + 32.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read Celsius and print Fahrenheit (integer, rounded down)\n}\n",
+      "points": 60,
       "type": "solve",
       "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
       "id": 8,
-      "name": "JSON Inventory Total",
-      "description": "Compute total inventory value from data.json.",
-      "code_preview": "#include <iostream>\nint main() {\n    // Open data.json and compute total\n}\n",
-      "points": 75,
-      "type": "solve",
-      "difficulty": "Easy",
-      "created_at": "2026-01-01T00:00:00.000Z"
-    },
-    {
-      "id": 9,
-      "name": "CSV Score reader",
-      "description": "Read data.csv and print names matching the input score.",
-      "code_preview": "#include <iostream>\nint main() {\n    // Read data.csv and find matching scores\n}\n",
+      "name": "Palindrome Check",
+      "description": "Read a single word from stdin. Print `YES` if it is a palindrome (reads the same forwards and backwards) or `NO` otherwise.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a word and check if it is a palindrome\n}\n",
       "points": 75,
       "type": "solve",
       "difficulty": "Medium",
-      "created_at": "2026-01-01T00:00:00.000Z"
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "name": "Prime Number Check",
+      "description": "Read an integer N (N >= 2) from stdin. Print `PRIME` if it is a prime number, or `NOT PRIME` otherwise.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N and determine if it is prime\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "name": "Fibonacci Sequence",
+      "description": "Read an integer N from stdin. Print the first N Fibonacci numbers (starting from 0, 1, 1, 2, 3, 5, ...) separated by spaces.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N and print the first N Fibonacci numbers\n}\n",
+      "points": 80,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 11,
+      "name": "Matrix Diagonal Sum",
+      "description": "Read an integer N, then an N×N matrix of integers (row by row). Print the sum of the elements on the main diagonal (top-left to bottom-right).",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N, then the NxN matrix, and print the diagonal sum\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 12,
+      "name": "Binary to Decimal",
+      "description": "Read a binary string (containing only '0' and '1') from stdin and print its decimal equivalent.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a binary string and convert to decimal\n}\n",
+      "points": 75,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 13,
+      "name": "Remove Duplicates",
+      "description": "Read an integer N, then N integers. Print the unique integers in the order they first appear, separated by spaces.",
+      "code_preview": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Read N integers and print only the unique ones in order\n}\n",
+      "points": 80,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 14,
+      "name": "Word Frequency",
+      "description": "Read an integer N, then N words. Print each unique word followed by its count, one per line, in the order they first appear. Format: `word count`.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read N words and count each unique word's frequency\n}\n",
+      "points": 80,
+      "type": "solve",
+      "difficulty": "Medium",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 15,
+      "name": "Longest Common Subsequence",
+      "description": "Read two strings from stdin (one per line). Print the length of their longest common subsequence.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read two strings and find the length of their LCS\n}\n",
+      "points": 100,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 16,
+      "name": "Merge Intervals",
+      "description": "Read an integer N, then N pairs of integers representing intervals [start, end]. Merge all overlapping intervals and print the resulting intervals, one per line, in the format `start end`, sorted by start value.",
+      "code_preview": "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\n\nint main() {\n    // Read N intervals, merge overlapping ones, and print the result\n}\n",
+      "points": 100,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 17,
+      "name": "Balanced Parentheses",
+      "description": "Read a string containing only `(`, `)`, `[`, `]`, `{`, `}`. Print `YES` if the parentheses are balanced and properly nested, or `NO` otherwise.",
+      "code_preview": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read a string and check if brackets are balanced\n}\n",
+      "points": 100,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 18,
+      "name": "Spiral Matrix",
+      "description": "Read an integer N, then an N×N matrix of integers (row by row). Print all elements in spiral order (clockwise, starting from top-left), separated by spaces.",
+      "code_preview": "#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // Read NxN matrix and print elements in spiral order\n}\n",
+      "points": 120,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 19,
+      "name": "Next Greater Element",
+      "description": "Read an integer N, then N integers. For each element, find the next greater element to its right. If none exists, output -1. Print the results space-separated.",
+      "code_preview": "#include <iostream>\n#include <vector>\n#include <stack>\nusing namespace std;\n\nint main() {\n    // Read N integers and find the next greater element for each\n}\n",
+      "points": 100,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
+    },
+    {
+      "id": 20,
+      "name": "Longest Increasing Subsequence",
+      "description": "Read an integer N, then N integers. Print the length of the longest strictly increasing subsequence.",
+      "code_preview": "#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // Read N integers and find the length of the longest increasing subsequence\n}\n",
+      "points": 120,
+      "type": "solve",
+      "difficulty": "Hard",
+      "created_at": "2026-03-11T00:00:00.000Z"
     }
   ]
 }
