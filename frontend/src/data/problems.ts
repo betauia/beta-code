@@ -37,7 +37,7 @@ int main() {
   {
     id: "2",
     title: "Even or Odd",
-    description: "Read an integer from stdin and print `Even` if it is even or `Odd` if it is odd.",
+    description: "Read an integer from stdin and print \`Even\` if it is even or \`Odd\` if it is odd.",
     difficulty: "Easy",
     tags: ["math", "basics"],
     points: 50,
@@ -118,26 +118,29 @@ int main() {
   },
   {
     id: "7",
-    title: "Celsius to Fahrenheit",
-    description: "Read an integer temperature in Celsius from stdin. Print the equivalent temperature in Fahrenheit, rounded down to the nearest integer. Formula: F = C * 9 / 5 + 32.",
+    title: "CSV Row Counter",
+    description: "A CSV file named \`data.csv\` is provided. It has a header row followed by data rows. Count and print the number of data rows (do not count the header).",
     difficulty: "Easy",
-    tags: ["math", "basics"],
+    tags: ["file-io", "csv"],
     points: 60,
     type: "solve",
     starterCode: `#include <iostream>
+#include <fstream>
+#include <string>
 using namespace std;
 
 int main() {
-    // Read Celsius and print Fahrenheit (integer, rounded down)
+    // Open "data.csv" and count the data rows (skip the header)
 }
 `,
+    dataFile: "data.csv",
   },
 
   // ==================== MEDIUM (7 tasks) ====================
   {
     id: "8",
     title: "Palindrome Check",
-    description: "Read a single word from stdin. Print `YES` if it is a palindrome (reads the same forwards and backwards) or `NO` otherwise.",
+    description: "Read a single word from stdin. Print \`YES\` if it is a palindrome (reads the same forwards and backwards) or \`NO\` otherwise.",
     difficulty: "Medium",
     tags: ["strings", "logic"],
     points: 75,
@@ -154,7 +157,7 @@ int main() {
   {
     id: "9",
     title: "Prime Number Check",
-    description: "Read an integer N (N >= 2) from stdin. Print `PRIME` if it is a prime number, or `NOT PRIME` otherwise.",
+    description: "Read an integer N (N >= 2) from stdin. Print \`PRIME\` if it is a prime number, or \`NOT PRIME\` otherwise.",
     difficulty: "Medium",
     tags: ["math", "logic"],
     points: 75,
@@ -186,7 +189,7 @@ int main() {
   {
     id: "11",
     title: "Matrix Diagonal Sum",
-    description: "Read an integer N, then an N×N matrix of integers (row by row). Print the sum of the elements on the main diagonal (top-left to bottom-right).",
+    description: "Read an integer N, then an N\u00d7N matrix of integers (row by row). Print the sum of the elements on the main diagonal (top-left to bottom-right).",
     difficulty: "Medium",
     tags: ["arrays", "math"],
     points: 75,
@@ -218,36 +221,43 @@ int main() {
   },
   {
     id: "13",
-    title: "Remove Duplicates",
-    description: "Read an integer N, then N integers. Print the unique integers in the order they first appear, separated by spaces.",
+    title: "CSV Column Sum",
+    description: "A CSV file named \`data.csv\` is provided with a header row and data rows. Read an integer from stdin indicating a column index (0-indexed). Sum all numeric values in that column (skipping the header) and print the result.",
     difficulty: "Medium",
-    tags: ["arrays", "logic"],
+    tags: ["file-io", "csv"],
     points: 80,
     type: "solve",
     starterCode: `#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 using namespace std;
 
 int main() {
-    // Read N integers and print only the unique ones in order
+    // Read column index from stdin
+    // Open "data.csv", skip header, sum values in that column
 }
 `,
+    dataFile: "data.csv",
   },
   {
     id: "14",
-    title: "Word Frequency",
-    description: "Read an integer N, then N words. Print each unique word followed by its count, one per line, in the order they first appear. Format: `word count`.",
+    title: "JSON Value Sum",
+    description: "A JSON file named \`data.json\` is provided where each line is a JSON object with \`\"name\"\` and \`\"value\"\` fields (e.g. \`{\"name\": \"Alpha\", \"value\": 10}\`). Read the file and print the sum of all \`value\` fields.",
     difficulty: "Medium",
-    tags: ["strings", "arrays"],
+    tags: ["file-io", "json"],
     points: 80,
     type: "solve",
     starterCode: `#include <iostream>
+#include <fstream>
 #include <string>
 using namespace std;
 
 int main() {
-    // Read N words and count each unique word's frequency
+    // Open "data.json", parse each line, sum all "value" fields
 }
 `,
+    dataFile: "data.json",
   },
 
   // ==================== HARD (6 tasks) ====================
@@ -271,7 +281,7 @@ int main() {
   {
     id: "16",
     title: "Merge Intervals",
-    description: "Read an integer N, then N pairs of integers representing intervals [start, end]. Merge all overlapping intervals and print the resulting intervals, one per line, in the format `start end`, sorted by start value.",
+    description: "Read an integer N, then N pairs of integers representing intervals [start, end]. Merge all overlapping intervals and print the resulting intervals, one per line, in the format \`start end\`, sorted by start value.",
     difficulty: "Hard",
     tags: ["sorting", "logic"],
     points: 100,
@@ -289,7 +299,7 @@ int main() {
   {
     id: "17",
     title: "Balanced Parentheses",
-    description: "Read a string containing only `(`, `)`, `[`, `]`, `{`, `}`. Print `YES` if the parentheses are balanced and properly nested, or `NO` otherwise.",
+    description: "Read a string containing only \`(\`, \`)\`, \`[\`, \`]\`, \`{\`, \`}\`. Print \`YES\` if the parentheses are balanced and properly nested, or \`NO\` otherwise.",
     difficulty: "Hard",
     tags: ["stacks", "strings"],
     points: 100,
@@ -305,38 +315,46 @@ int main() {
   },
   {
     id: "18",
-    title: "Spiral Matrix",
-    description: "Read an integer N, then an N×N matrix of integers (row by row). Print all elements in spiral order (clockwise, starting from top-left), separated by spaces.",
+    title: "CSV Student Grades",
+    description: "A CSV file named \`grades.csv\` is provided with a header row followed by student data. Each row has a student name followed by numeric scores for each subject (comma-separated). Print each student's name followed by a space and their average score (using integer division), one per line.",
     difficulty: "Hard",
-    tags: ["arrays", "logic"],
+    tags: ["file-io", "csv"],
     points: 120,
     type: "solve",
     starterCode: `#include <iostream>
-#include <vector>
+#include <fstream>
+#include <string>
+#include <sstream>
 using namespace std;
 
 int main() {
-    // Read NxN matrix and print elements in spiral order
+    // Open "grades.csv", skip header
+    // For each student: compute average of their scores (integer division)
+    // Print: name average
 }
 `,
+    dataFile: "grades.csv",
   },
   {
     id: "19",
-    title: "Next Greater Element",
-    description: "Read an integer N, then N integers. For each element, find the next greater element to its right. If none exists, output -1. Print the results space-separated.",
+    title: "JSON Inventory Total",
+    description: "A JSON file named \`inventory.json\` is provided where each line is a JSON object with \`\"item\"\`, \`\"price\"\`, and \`\"qty\"\` fields (e.g. \`{\"item\": \"Widget\", \"price\": 10, \"qty\": 5}\`). Compute and print the total inventory value, which is the sum of price * qty for each item.",
     difficulty: "Hard",
-    tags: ["stacks", "arrays"],
-    points: 100,
+    tags: ["file-io", "json"],
+    points: 120,
     type: "solve",
     starterCode: `#include <iostream>
-#include <vector>
-#include <stack>
+#include <fstream>
+#include <string>
 using namespace std;
 
 int main() {
-    // Read N integers and find the next greater element for each
+    // Open "inventory.json"
+    // Parse each line for "price" and "qty" fields
+    // Print sum of (price * qty) for all items
 }
 `,
+    dataFile: "inventory.json",
   },
   {
     id: "20",
