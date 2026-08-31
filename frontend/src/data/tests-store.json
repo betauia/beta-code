@@ -214,10 +214,10 @@
       "task_id": 7,
       "name": "sample1",
       "input": "\n",
-      "expected_output": "3",
+      "expected_output": "10",
       "is_hidden": false,
       "data_file_name": "data.csv",
-      "data_file_content": "name,age,city\nAlice,30,Oslo\nBob,25,Bergen\nCharlie,35,Trondheim",
+      "data_file_content": "name,age,city,occupation\nAlice,30,Oslo,Engineer\nBob,25,Bergen,Designer\nCharlie,35,Trondheim,Teacher\nDiana,28,Stavanger,Doctor\nErik,42,Tromso,Pilot\nFrida,31,Drammen,Chef\nGustav,27,Kristiansand,Artist\nHanna,38,Fredrikstad,Lawyer\nIvar,45,Bodo,Mechanic\nJulia,29,Aalesund,Nurse",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -225,10 +225,10 @@
       "task_id": 7,
       "name": "hidden1",
       "input": "\n",
-      "expected_output": "2",
+      "expected_output": "15",
       "is_hidden": true,
       "data_file_name": "data.csv",
-      "data_file_content": "id,value\n1,100\n2,200",
+      "data_file_content": "id,firstname,lastname,department,salary\n1,John,Smith,Engineering,85000\n2,Jane,Doe,Marketing,72000\n3,Mike,Johnson,Engineering,91000\n4,Sarah,Williams,Sales,68000\n5,Tom,Brown,Marketing,75000\n6,Lisa,Davis,Engineering,88000\n7,James,Wilson,Sales,71000\n8,Emily,Taylor,Marketing,79000\n9,David,Anderson,Engineering,95000\n10,Anna,Thomas,Sales,73000\n11,Chris,Jackson,Marketing,77000\n12,Laura,White,Engineering,82000\n13,Peter,Harris,Sales,69000\n14,Maria,Martin,Marketing,74000\n15,Robert,Garcia,Engineering,93000",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -236,10 +236,10 @@
       "task_id": 7,
       "name": "hidden2",
       "input": "\n",
-      "expected_output": "5",
+      "expected_output": "20",
       "is_hidden": true,
       "data_file_name": "data.csv",
-      "data_file_content": "product,price,stock,category\nWidget,10,50,A\nGadget,25,30,B\nDoohickey,8,100,C\nSprocket,15,75,A\nThingamajig,20,40,B",
+      "data_file_content": "product,category,price,stock,supplier\nLaptop,Electronics,999,45,TechCorp\nMouse,Electronics,29,200,TechCorp\nKeyboard,Electronics,79,150,TechCorp\nMonitor,Electronics,349,60,DisplayInc\nHeadphones,Electronics,149,120,AudioMax\nDesk,Furniture,299,30,OfficePro\nChair,Furniture,449,25,OfficePro\nLamp,Furniture,59,80,LightCo\nShelf,Furniture,129,40,OfficePro\nCabinet,Furniture,199,20,OfficePro\nNotebook,Stationery,5,500,PaperWorld\nPen,Stationery,2,1000,PaperWorld\nPencil,Stationery,1,800,PaperWorld\nEraser,Stationery,1,600,PaperWorld\nRuler,Stationery,3,400,PaperWorld\nBackpack,Accessories,69,90,BagCo\nWaterbottle,Accessories,15,200,DrinkUp\nUmbrella,Accessories,25,100,RainGuard\nSunglasses,Accessories,45,75,ShadeInc\nWatch,Accessories,199,50,TimeCo",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -456,10 +456,10 @@
       "task_id": 13,
       "name": "sample1",
       "input": "1\n",
-      "expected_output": "6",
+      "expected_output": "36700",
       "is_hidden": false,
       "data_file_name": "data.csv",
-      "data_file_content": "name,price,quantity\nApple,2,10\nBanana,1,25\nCherry,3,15",
+      "data_file_content": "name,price,quantity,category\nLaptop,12000,5,Electronics\nPhone,8000,12,Electronics\nTablet,4500,8,Electronics\nHeadphones,1500,25,Audio\nSpeaker,2500,10,Audio\nKeyboard,800,30,Peripherals\nMouse,400,45,Peripherals\nMonitor,5500,7,Display\nWebcam,1200,15,Peripherals\nCharger,300,50,Accessories",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -467,10 +467,10 @@
       "task_id": 13,
       "name": "hidden1",
       "input": "2\n",
-      "expected_output": "50",
+      "expected_output": "207",
       "is_hidden": true,
       "data_file_name": "data.csv",
-      "data_file_content": "name,price,quantity\nApple,2,10\nBanana,1,25\nCherry,3,15",
+      "data_file_content": "name,price,quantity,category\nLaptop,12000,5,Electronics\nPhone,8000,12,Electronics\nTablet,4500,8,Electronics\nHeadphones,1500,25,Audio\nSpeaker,2500,10,Audio\nKeyboard,800,30,Peripherals\nMouse,400,45,Peripherals\nMonitor,5500,7,Display\nWebcam,1200,15,Peripherals\nCharger,300,50,Accessories",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -478,10 +478,10 @@
       "task_id": 13,
       "name": "hidden2",
       "input": "1\n",
-      "expected_output": "47",
+      "expected_output": "1905",
       "is_hidden": true,
       "data_file_name": "data.csv",
-      "data_file_content": "item,cost,stock\nPen,5,100\nBook,12,50\nBag,30,20",
+      "data_file_content": "employee,hours,rate,department\nAlice,160,350,Engineering\nBob,145,280,Marketing\nCharlie,170,400,Engineering\nDiana,155,320,Sales\nErik,180,450,Engineering\nFrida,140,270,Marketing\nGustav,165,380,Sales\nHanna,150,310,Engineering\nIvar,175,420,Engineering\nJulia,135,260,Marketing\nKarl,160,340,Sales\nLisa,170,390,Engineering",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -489,10 +489,10 @@
       "task_id": 14,
       "name": "sample1",
       "input": "\n",
-      "expected_output": "60",
+      "expected_output": "21950",
       "is_hidden": false,
       "data_file_name": "data.json",
-      "data_file_content": "{\"name\": \"Alpha\", \"value\": 10}\n{\"name\": \"Beta\", \"value\": 20}\n{\"name\": \"Gamma\", \"value\": 30}",
+      "data_file_content": "{\"name\": \"Alpha Project\", \"value\": 1500}\n{\"name\": \"Beta Initiative\", \"value\": 2300}\n{\"name\": \"Gamma Research\", \"value\": 4200}\n{\"name\": \"Delta Operations\", \"value\": 1800}\n{\"name\": \"Epsilon Fund\", \"value\": 3100}\n{\"name\": \"Zeta Program\", \"value\": 2700}\n{\"name\": \"Eta Campaign\", \"value\": 950}\n{\"name\": \"Theta Venture\", \"value\": 5400}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -500,10 +500,10 @@
       "task_id": 14,
       "name": "hidden1",
       "input": "\n",
-      "expected_output": "150",
+      "expected_output": "6340",
       "is_hidden": true,
       "data_file_name": "data.json",
-      "data_file_content": "{\"name\": \"X\", \"value\": 50}\n{\"name\": \"Y\", \"value\": 100}",
+      "data_file_content": "{\"name\": \"Server A\", \"value\": 450}\n{\"name\": \"Server B\", \"value\": 780}\n{\"name\": \"Server C\", \"value\": 320}\n{\"name\": \"Server D\", \"value\": 550}\n{\"name\": \"Server E\", \"value\": 910}\n{\"name\": \"Server F\", \"value\": 640}\n{\"name\": \"Server G\", \"value\": 270}\n{\"name\": \"Server H\", \"value\": 830}\n{\"name\": \"Server I\", \"value\": 490}\n{\"name\": \"Server J\", \"value\": 1100}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -511,10 +511,10 @@
       "task_id": 14,
       "name": "hidden2",
       "input": "\n",
-      "expected_output": "42",
+      "expected_output": "625",
       "is_hidden": true,
       "data_file_name": "data.json",
-      "data_file_content": "{\"name\": \"Solo\", \"value\": 42}",
+      "data_file_content": "{\"name\": \"Task 1\", \"value\": 12}\n{\"name\": \"Task 2\", \"value\": 45}\n{\"name\": \"Task 3\", \"value\": 78}\n{\"name\": \"Task 4\", \"value\": 23}\n{\"name\": \"Task 5\", \"value\": 91}\n{\"name\": \"Task 6\", \"value\": 34}\n{\"name\": \"Task 7\", \"value\": 67}\n{\"name\": \"Task 8\", \"value\": 56}\n{\"name\": \"Task 9\", \"value\": 89}\n{\"name\": \"Task 10\", \"value\": 15}\n{\"name\": \"Task 11\", \"value\": 42}\n{\"name\": \"Task 12\", \"value\": 73}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -665,10 +665,10 @@
       "task_id": 18,
       "name": "sample1",
       "input": "\n",
-      "expected_output": "Alice 80\nBob 72\nCharlie 94",
+      "expected_output": "Alice 85\nBob 79\nCharlie 88\nDiana 69\nErik 88\nFrida 76\nGustav 89\nHanna 77",
       "is_hidden": false,
       "data_file_name": "grades.csv",
-      "data_file_content": "name,math,science,english\nAlice,90,80,70\nBob,60,75,81\nCharlie,100,95,88",
+      "data_file_content": "name,math,physics,chemistry,english\nAlice,92,88,76,84\nBob,78,65,82,91\nCharlie,95,92,88,79\nDiana,63,71,68,75\nErik,87,94,91,82\nFrida,74,68,79,86\nGustav,91,85,93,88\nHanna,82,77,71,80",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -676,10 +676,10 @@
       "task_id": 18,
       "name": "hidden1",
       "input": "\n",
-      "expected_output": "Diana 60\nEve 90",
+      "expected_output": "Ivar 62\nJulia 88\nKarl 71\nLisa 92\nMagnus 61\nNora 79",
       "is_hidden": true,
       "data_file_name": "grades.csv",
-      "data_file_content": "name,math,science,english\nDiana,50,60,70\nEve,80,90,100",
+      "data_file_content": "name,biology,history,geography\nIvar,55,62,70\nJulia,88,91,85\nKarl,72,68,74\nLisa,95,89,92\nMagnus,61,58,65\nNora,79,83,77",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -687,10 +687,10 @@
       "task_id": 18,
       "name": "hidden2",
       "input": "\n",
-      "expected_output": "Frank 90\nGrace 80",
+      "expected_output": "Olivia 87\nPatrick 71\nQuinn 90\nRachel 74\nSamuel 81\nTina 87\nUlrik 78\nVera 84\nWilliam 73\nXena 93",
       "is_hidden": true,
       "data_file_name": "grades.csv",
-      "data_file_content": "name,physics,chemistry\nFrank,88,92\nGrace,75,85",
+      "data_file_content": "name,math,science,english,art,music\nOlivia,88,92,78,95,84\nPatrick,72,68,81,65,70\nQuinn,95,91,89,82,93\nRachel,64,73,76,88,71\nSamuel,83,79,85,71,90\nTina,91,86,93,79,87\nUlrik,77,82,69,91,75\nVera,85,90,88,76,82\nWilliam,69,74,72,83,68\nXena,93,97,91,89,95",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -698,10 +698,10 @@
       "task_id": 19,
       "name": "sample1",
       "input": "\n",
-      "expected_output": "221",
+      "expected_output": "208000",
       "is_hidden": false,
       "data_file_name": "inventory.json",
-      "data_file_content": "{\"item\": \"Widget\", \"price\": 10, \"qty\": 5}\n{\"item\": \"Gadget\", \"price\": 25, \"qty\": 3}\n{\"item\": \"Doohickey\", \"price\": 8, \"qty\": 12}",
+      "data_file_content": "{\"item\": \"Laptop\", \"price\": 12000, \"qty\": 5}\n{\"item\": \"Mouse\", \"price\": 250, \"qty\": 40}\n{\"item\": \"Keyboard\", \"price\": 800, \"qty\": 30}\n{\"item\": \"Monitor\", \"price\": 5500, \"qty\": 8}\n{\"item\": \"Headphones\", \"price\": 1500, \"qty\": 20}\n{\"item\": \"Webcam\", \"price\": 900, \"qty\": 15}\n{\"item\": \"USB Hub\", \"price\": 350, \"qty\": 50}\n{\"item\": \"Mousepad\", \"price\": 150, \"qty\": 60}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -709,10 +709,10 @@
       "task_id": 19,
       "name": "hidden1",
       "input": "\n",
-      "expected_output": "550",
+      "expected_output": "8350",
       "is_hidden": true,
       "data_file_name": "inventory.json",
-      "data_file_content": "{\"item\": \"Bolt\", \"price\": 2, \"qty\": 100}\n{\"item\": \"Nut\", \"price\": 1, \"qty\": 200}\n{\"item\": \"Screw\", \"price\": 3, \"qty\": 50}",
+      "data_file_content": "{\"item\": \"Bolt M6\", \"price\": 2, \"qty\": 500}\n{\"item\": \"Bolt M8\", \"price\": 3, \"qty\": 400}\n{\"item\": \"Nut M6\", \"price\": 1, \"qty\": 600}\n{\"item\": \"Nut M8\", \"price\": 2, \"qty\": 450}\n{\"item\": \"Washer M6\", \"price\": 1, \"qty\": 700}\n{\"item\": \"Washer M8\", \"price\": 1, \"qty\": 550}\n{\"item\": \"Screw 20mm\", \"price\": 3, \"qty\": 300}\n{\"item\": \"Screw 40mm\", \"price\": 4, \"qty\": 250}\n{\"item\": \"Nail 30mm\", \"price\": 1, \"qty\": 800}\n{\"item\": \"Nail 50mm\", \"price\": 2, \"qty\": 350}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
@@ -720,10 +720,10 @@
       "task_id": 19,
       "name": "hidden2",
       "input": "\n",
-      "expected_output": "600",
+      "expected_output": "32170",
       "is_hidden": true,
       "data_file_name": "inventory.json",
-      "data_file_content": "{\"item\": \"Monitor\", \"price\": 300, \"qty\": 2}",
+      "data_file_content": "{\"item\": \"Widget A\", \"price\": 45, \"qty\": 120}\n{\"item\": \"Widget B\", \"price\": 62, \"qty\": 85}\n{\"item\": \"Widget C\", \"price\": 38, \"qty\": 200}\n{\"item\": \"Gadget X\", \"price\": 95, \"qty\": 50}\n{\"item\": \"Gadget Y\", \"price\": 78, \"qty\": 75}\n{\"item\": \"Gadget Z\", \"price\": 110, \"qty\": 30}",
       "created_at": "2026-03-11T00:00:00.000Z"
     },
     {
