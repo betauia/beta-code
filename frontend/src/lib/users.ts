@@ -49,9 +49,26 @@ export async function initUsersTable() {
   `);
 }
  
-// Hash password with salt
+// Hash password with salt using scrypt (memory-hard, resists offline brute
+// force much better than a single unsalted-round SHA-256 pass).
+// Output is 128 hex chars (64-byte key), which distinguishes it from the
+// legacy 64-hex-char SHA-256 hashes still held by accounts created before
+// this change - see verifyUser() for the transparent migration.
 function hashPassword(password: string, salt: string): string {
+  return crypto.scryptSync(password, salt, 64).toString("hex");
+}
+
+// Legacy hash function, kept only to verify (and then migrate) accounts
+// created before the switch to scrypt.
+function hashPasswordLegacySha256(password: string, salt: string): string {
   return crypto.createHash("sha256").update(password + salt).digest("hex");
+}
+
+function safeEqualHex(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "hex");
+  const bufB = Buffer.from(b, "hex");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 function rowToUser(row: any): User {
@@ -101,12 +118,26 @@ export async function verifyUser(username: string, password: string): Promise<Us
   }
  
   const row = result.rows[0];
-  const passwordHash = hashPassword(password, row.salt);
- 
-  if (passwordHash !== row.password_hash) {
+  const isLegacyHash = row.password_hash.length !== 128;
+
+  const valid = isLegacyHash
+    ? safeEqualHex(hashPasswordLegacySha256(password, row.salt), row.password_hash)
+    : safeEqualHex(hashPassword(password, row.salt), row.password_hash);
+
+  if (!valid) {
     return null;
   }
- 
+
+  if (isLegacyHash) {
+    // Transparently upgrade this account to scrypt now that we have the
+    // plaintext password in hand.
+    const pool = await getPool() as any;
+    await pool.query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [
+      row.id,
+      hashPassword(password, row.salt),
+    ]);
+  }
+
   return rowToUser(row);
 }
  

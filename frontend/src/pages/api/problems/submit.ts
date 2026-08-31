@@ -47,7 +47,7 @@ export async function POST({ request }: { request: Request }) {
 
   const job = await queue.add(
     "run",
-    { code, problemId },
+    { code, problemId, userId: user.id },
     {
       removeOnComplete: { count: 2000 },
       removeOnFail: { count: 2000 },

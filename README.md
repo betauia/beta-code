@@ -55,7 +55,7 @@ Each task has a description, starter code in an in-browser editor, and a **Run**
 
 Results are shown right below the editor:
 
-- **Wrong Answer** — shows the input, expected output, and the program's actual output.
+- **Wrong Answer** — shows the input, expected output, and actual output for every visible (non-hidden) test, plus a pass/fail summary line for the hidden grading test (its contents stay secret, only the verdict is shown).
 
   ![Wrong answer result](images_README/FaildTask.png)
 
@@ -117,7 +117,23 @@ Run this in root to get all the packages:
 ```bash
 npm run install:all
 ```
- 
+
+### Configure Environment Variables
+
+`.env` files hold local secrets and aren't committed to git. Copy the template and fill it in (a `RUNNER_SECRET` is required — the frontend refuses to serve test data without one):
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+Generate a `RUNNER_SECRET` value with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Paste it into `frontend/.env`, and use the same value in the `RUNNER_SECRET=` env var in the root `package.json` `start`/`build` scripts (the runner process reads it from there, not from a `.env` file).
+
 ### Launch the Services
  
 Run this in root:

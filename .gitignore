@@ -15,6 +15,11 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
+# secrets - never commit real credentials
+.env
+.env.*
+!.env.example
+
 # IDE settings
 .idea/
 .vscode/

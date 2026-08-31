@@ -108,10 +108,11 @@ This is the most important flow in the system. Follow the numbers:
  
 | Method | Path | Body / Query | Response | Notes |
 |--------|------|-------------|----------|-------|
-| `POST` | `/api/problems/submit` | `{ code, problemId }` | `{ jobId }` | Adds job to Redis queue |
-| `GET` | `/api/problems/status` | `?jobId=<id>` | `{ state, result?, error? }` | Poll this until `state` is `"completed"` or `"failed"` |
+| `POST` | `/api/problems/submit` | `{ code, problemId }` | `{ jobId }` | Requires session; adds job to Redis queue (stamped with the submitter's `userId`) |
+| `GET` | `/api/problems/status` | `?jobId=<id>` | `{ state, result?, error? }` | Requires session; only the submitting user (or an admin) can read a given job. Poll until `state` is `"completed"` or `"failed"` |
 | `GET` | `/api/problems/data` | `?problemId=<id>` | Binary file download | Returns the problem's data file |
 | `POST` | `/api/problems/complete-task` | `{ problemId }` | `{ success, newTask }` | Requires session; marks problem done for user |
+| `GET` | `/api/completions` | *(none)* | `{ completions, pointsById, playerUsernames, competitionStart, competitionEnd }` | Requires session; feeds the leaderboard's score graph |
  
 ### Admin (requires `is_admin = true`)
  
@@ -153,7 +154,8 @@ Browser                          Astro Server (in-memory store)
 **Important for server work:**
 - Sessions expire after **24 hours**
 - If the Astro process restarts, **all sessions are lost** (users must log in again)
-- The cookie is `HttpOnly` and `SameSite=Lax`
+- The cookie is `HttpOnly`, `SameSite=Lax`, and additionally `Secure` when running a production build (`import.meta.env.PROD`)
+- `POST /api/user/login` is rate-limited in memory: 8 failed attempts per `IP + username` pair within a 10-minute window return `429` until it resets (`frontend/src/lib/rateLimit.ts`)
  
 ---
  
@@ -173,9 +175,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 ```
  
-- Passwords are hashed with SHA-256 using a random salt
+- Passwords are hashed with `scrypt` (Node's built-in, memory-hard) using a random salt. Accounts created before this change still have a legacy SHA-256 hash on disk; `verifyUser()` detects that by hash length (64 hex chars = legacy, 128 = scrypt), verifies against it once, and transparently re-hashes to scrypt on that successful login.
 - `completed_tasks` is a PostgreSQL text array of problem IDs (e.g. `{"problem1","problem3"}`)
 - Default admin account (`admin` / `admin123`) is created on first startup
+
+There's also a `task_completions` table (`user_id`, `task_id`, `completed_at`) recording *when* each task was finished — used by the leaderboard's score graph and by `getUserCompletions()` to tie-break equal leaderboard scores (whoever reached that score first ranks higher). `completed_tasks` on `users` itself carries no timestamp.
+
+**Timezone handling:** `TIMESTAMP` columns (no time zone) store naive digits. Postgres's session `timezone` is forced to `UTC` on every connection (`db.ts`, `options: "-c timezone=UTC"`), and the `pg` driver's default type parser for that column type would otherwise read those naive digits back using the *Node process's* local OS timezone instead of UTC — silently shifting every stored time by that offset. `db.ts` overrides the OID 1114 type parser to append `Z` before parsing, forcing UTC interpretation regardless of what timezone the server process itself runs in.
  
 ---
  
@@ -189,9 +195,12 @@ CREATE TABLE IF NOT EXISTS users (
 ```json
 {
   "code": "// user's C++ code as a string",
-  "problemId": "problem1"
+  "problemId": "problem1",
+  "userId": 42
 }
 ```
+
+`userId` is stamped on the job by `/api/problems/submit` and checked by `/api/problems/status` — a player can only poll the status of their own submissions (admins can view any).
  
 **Job result (on success):**
 ```json
@@ -259,6 +268,9 @@ docker run --rm \
 | `PROBLEMS_DIR` | `./runner/problems` | Worker | Where problem test cases live |
 | `JOBS_BASE` | `./runner/jobs` | Worker | Temp directory for job files |
 | `CONCURRENCY` | `5` | Worker | How many jobs to process in parallel |
+| `RUNNER_SECRET` | *(none — required)* | Frontend + Worker | Shared bearer token gating `GET /api/tasks/tests`, the internal endpoint that returns hidden tests' expected output. If unset or mismatched, the frontend returns `403` — it fails **closed**, not open. |
+
+`frontend/.env` is gitignored (see `frontend/.env.example` for the template); it holds `DATABASE_URL`, `REDIS_URL`, and the local dev `RUNNER_SECRET`. It used to be committed to the repo — if you're on an older checkout, regenerate your local secrets rather than trusting whatever was in git history.
  
 ---
  
@@ -295,7 +307,9 @@ sandbox/
 1. **No WebSockets** - The frontend polls for submission status. If you want real-time updates, you'd need to add WebSocket support.
 2. **Sessions are in-memory** - A server restart loses all sessions. If you need persistence, move sessions to Redis.
 3. **Worker is a separate process** - It runs independently from the Astro frontend. They only communicate through Redis.
-4. **No authentication on the worker** - The worker trusts whatever is in the Redis queue. The API is responsible for validating input before queuing.
+4. **No authentication on the worker** - The worker trusts whatever is in the Redis queue. The API is responsible for validating input before queuing. The worker does authenticate itself to the frontend, though: it fetches test cases (including hidden ones) via `GET /api/tasks/tests`, which requires a `RUNNER_SECRET` bearer token — this must be set identically for both processes or that endpoint refuses all requests.
 5. **The sandbox has no network** - By design. Don't change this unless you have a very good reason.
-6. **Password hashing uses SHA-256** - Not bcrypt/argon2. This is a known weakness if you're hardening security.
+6. **Password hashing uses scrypt** - Node's built-in memory-hard KDF. Legacy accounts (pre-scrypt) still verify against their old SHA-256 hash and get transparently migrated on next successful login.
 7. **Problem test cases are on disk** - Not in the database. They live in `runner/problems/<id>/tests.json`.
+8. **Submission status is scoped per-user** - `GET /api/problems/status` checks the requesting user owns the job (or is an admin) before returning results; it used to be unauthenticated and readable by anyone who guessed a job ID.
+9. **No CSP** - A middleware (`frontend/src/middleware.ts`) sets baseline headers (`X-Frame-Options`, `X-Content-Type-Options`, etc.) on every response, but there's no script-src Content-Security-Policy, since the app relies on inline `<script>` tags across `.astro` pages. Adding a strict CSP would need a nonce-based rework first.

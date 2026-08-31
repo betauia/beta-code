@@ -71,14 +71,18 @@ export function getSessionIdFromCookies(cookieHeader: string | null): string | n
   return null;
 }
  
+// Secure requires HTTPS; the ingress terminates TLS in production but local
+// dev runs over plain http, so only set it when actually running a prod build.
+const SECURE_FLAG = import.meta.env.PROD ? "; Secure" : "";
+
 // Create session cookie header value
 export function createSessionCookie(sessionId: string): string {
-  return `${COOKIE_NAME}=${sessionId}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_DURATION / 1000}`;
+  return `${COOKIE_NAME}=${sessionId}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_DURATION / 1000}${SECURE_FLAG}`;
 }
- 
+
 // Create cookie to clear session
 export function clearSessionCookie(): string {
-  return `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+  return `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${SECURE_FLAG}`;
 }
  
 // Get current user from request
