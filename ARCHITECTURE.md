@@ -112,7 +112,7 @@ This is the most important flow in the system. Follow the numbers:
 | `GET` | `/api/problems/status` | `?jobId=<id>` | `{ state, result?, error? }` | Requires session; only the submitting user (or an admin) can read a given job. Poll until `state` is `"completed"` or `"failed"` |
 | `GET` | `/api/problems/data` | `?problemId=<id>` | Binary file download | Returns the problem's data file |
 | `POST` | `/api/problems/complete-task` | `{ problemId }` | `{ success, newTask }` | Requires session; marks problem done for user |
-| `GET` | `/api/completions` | *(none)* | `{ completions, pointsById, playerUsernames, competitionStart, competitionEnd }` | Requires session; feeds the leaderboard's score graph |
+| `GET` | `/api/completions` | *(none)* | `{ completions, pointsById, playerUsernames, competitionStart, competitionEnd }` | Public (no session required); feeds the leaderboard's score graph, which itself has no login gate |
  
 ### Admin (requires `is_admin = true`)
  
