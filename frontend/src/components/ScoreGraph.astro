@@ -48,9 +48,12 @@ const { refreshMs = 5000 } = Astro.props;
     const effectiveStart = competitionStart
       ?? solveTimes[0]
       ?? new Date(Date.now() - 3_600_000).toISOString();
-    const effectiveEnd = competitionEnd
-      ?? solveTimes[solveTimes.length - 1]
-      ?? new Date().toISOString();
+    // Keep the axis running to "now" while the competition is still ongoing;
+    // only freeze it at competitionEnd once that time has actually passed.
+    const now = new Date();
+    const effectiveEnd = (competitionEnd && new Date(competitionEnd) <= now)
+      ? competitionEnd
+      : now.toISOString();
 
     // start with an explicit point at start time (so lines begin at 0)
     const series = {};
@@ -58,11 +61,29 @@ const { refreshMs = 5000 } = Astro.props;
       series[u] = [{ x: effectiveStart, y: 0 }];
     }
 
+    // Ramp duration for each solve's rise, scaled to the visible time span so
+    // it reads as a short diagonal at any zoom level (not a hairline vertical
+    // snap on a multi-hour graph, not a huge ramp on a short one).
+    const totalRangeMs = Math.max(new Date(effectiveEnd).getTime() - new Date(effectiveStart).getTime(), 1);
+    const rampMs = Math.min(Math.max(totalRangeMs * 0.015, 15_000), 10 * 60_000);
+
     for (const c of sorted) {
       const u = c.username;
       if (!(u in total)) continue; // ignore unknown users
       const pts = pointsById[String(c.task_id)] ?? 0;
+      const prevY = total[u];
       total[u] += pts;
+
+      // Hold flat at the previous score right up until just before this solve,
+      // so the rise reads as a short diagonal jump instead of a slow ramp
+      // stretched across the whole gap since the last solve.
+      const completedAt = new Date(c.completed_at);
+      const justBefore = new Date(completedAt.getTime() - rampMs).toISOString();
+      const lastPoint = series[u][series[u].length - 1];
+      if (lastPoint && new Date(lastPoint.x).getTime() < completedAt.getTime() - rampMs) {
+        series[u].push({ x: justBefore, y: prevY });
+      }
+
       series[u].push({ x: c.completed_at, y: total[u] });
     }
 
@@ -86,9 +107,7 @@ const { refreshMs = 5000 } = Astro.props;
     options: {
       responsive: true,
       parsing: true,
-      animation: {
-        duration: 300, // small “tick” animation on updates
-      },
+      animation: false,
       plugins: {
         legend: {
           position: "bottom",
@@ -154,7 +173,7 @@ const { refreshMs = 5000 } = Astro.props;
       borderColor: colorFor(player),
       backgroundColor: colorFor(player),
       stepped: false,     // ✅ key: “solve jumps” like picoCTF/HTB
-      tension: 0.05,
+      tension: 0,         // straight segments between points, no bezier curve
       fill: false,
     }));
 

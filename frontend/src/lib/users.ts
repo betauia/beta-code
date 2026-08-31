@@ -216,6 +216,19 @@ export async function initTaskCompletionsTable() {
   `);
 }
  
+// Get one user's task completions, ordered by when each was completed
+export async function getUserCompletions(userId: number): Promise<{ task_id: string; completed_at: string }[]> {
+  const pool = await getPool() as any;
+  const result = await pool.query(
+    `SELECT task_id, completed_at
+     FROM task_completions
+     WHERE user_id = $1
+     ORDER BY completed_at ASC`,
+    [userId]
+  );
+  return result.rows;
+}
+
 // Get all task completions for the graph (ordered by time)
 export async function getAllCompletions(): Promise<{ user_id: number; username: string; task_id: string; completed_at: string }[]> {
   const pool = await getPool() as any;

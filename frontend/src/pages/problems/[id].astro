@@ -531,13 +531,20 @@ const dataFiles = [
           if (result.failedTest) details  = `Exceeded time limit on test: ${result.failedTest}`;
           if (result.input)      details += `\n\n--- Input ---\n${result.input}`;
         } else if (verdict === "Wrong Answer" && result.tests) {
-          const failed = result.tests.find((t) => t.status === "WA");
-          if (failed && failed.name !== "hidden") {
-            details += `\n--- Input ---\n${failed.input ?? ""}`;
-            details += `\n--- Expected ---\n${failed.expected ?? ""}\n`;
-            details += `\n--- Your Output ---\n${failed.output ?? ""}`;
-          } else if (failed) {
-            details = "Failed on a hidden test.";
+          const visibleTests = result.tests.filter((t) => t.name !== "hidden");
+          const hiddenTests  = result.tests.filter((t) => t.name === "hidden");
+
+          for (const t of visibleTests) {
+            const status = t.status === "OK" ? "✅ Passed" : "❌ Failed";
+            details += `\n--- Test: ${t.name} (${status}) ---`;
+            details += `\nInput:\n${t.input ?? ""}`;
+            details += `\nExpected:\n${t.expected ?? ""}`;
+            details += `\nYour Output:\n${t.output ?? ""}\n`;
+          }
+
+          if (hiddenTests.length) {
+            const hiddenPassed = hiddenTests.every((t) => t.status === "OK");
+            details += `\n--- Hidden Test ---\n${hiddenPassed ? "✅ Passed" : "❌ Failed"}`;
           }
         }
 
